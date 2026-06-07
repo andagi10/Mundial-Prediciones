@@ -375,7 +375,9 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
       <div class="pts-g">
         <div class="pi">⚽ Equipo gana: <strong>+3</strong></div>
         <div class="pi">🤝 Empate: <strong>+1</strong></div>
-        <div class="pi">🎯 Jugador marca: <strong>+5</strong></div>
+        <div class="pi">🎯 Tu jugador marca: <strong>+5</strong></div>
+        <div class="pi">🅰️ Tu jugador asiste: <strong>+3</strong></div>
+        <div class="pi">🏆 Tu equipo gana el partido: <strong>+1</strong></div>
         <div class="pi">🏆 Llega a cuartos: <strong>+6</strong></div>
         <div class="pi">🏆 Llega a semis: <strong>+10</strong></div>
         <div class="pi">🥇 Campeón: <strong>+20</strong></div>
@@ -471,25 +473,804 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const TEAMS=['🇦🇷 Argentina','🇦🇺 Australia','🇦🇹 Austria','🇩🇿 Argelia','🇧🇪 Bélgica','🇧🇦 Bosnia y Herz.','🇧🇷 Brasil','🇨🇦 Canadá','🇨🇻 Cabo Verde','🇨🇿 Chequia','🇨🇴 Colombia','🇨🇩 DR Congo','🇭🇷 Croacia','🇨🇼 Curazao','🇨🇮 Costa de Marfil','🇪🇨 Ecuador','🇪🇬 Egipto','🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia','🇪🇸 España','🇺🇸 USA','🇫🇷 Francia','🇬🇭 Ghana','🇭🇹 Haití','🇮🇷 Irán','🇮🇶 Iraq','🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra','🇯🇵 Japón','🇯🇴 Jordania','🇲🇦 Marruecos','🇲🇽 México','🇳🇱 Países Bajos','🇳🇿 Nueva Zelanda','🇳🇴 Noruega','🇵🇦 Panamá','🇵🇾 Paraguay','🇵🇹 Portugal','🇶🇦 Qatar','🇸🇦 Arabia Saudita','🇸🇳 Senegal','🇰🇷 Corea del Sur','🇿🇦 Sudáfrica','🇨🇭 Suiza','🇸🇪 Suecia','🇹🇳 Túnez','🇹🇷 Turquía','🇺🇾 Uruguay','🇺🇿 Uzbekistán'];
 const GROUPS=['A','B','C','D','E','F','G','H','I','J','K','L'];
 
+const SQUADS = {
+  '🇲🇽 México': [
+    {n:1,pos:'GK',name:'Guillermo Ochoa'},
+    {n:13,pos:'GK',name:'Raúl Rangel'},
+    {n:22,pos:'GK',name:'Carlos Acevedo'},
+    {n:2,pos:'DF',name:'Jesús Gallardo'},
+    {n:3,pos:'DF',name:'César Montes'},
+    {n:4,pos:'DF',name:'Jorge Sánchez'},
+    {n:5,pos:'DF',name:'Johan Vásquez'},
+    {n:6,pos:'DF',name:'Israel Reyes'},
+    {n:23,pos:'DF',name:'Mateo Chávez'},
+    {n:7,pos:'MF',name:'Edson Álvarez'},
+    {n:8,pos:'MF',name:'Orbelín Pineda'},
+    {n:14,pos:'MF',name:'Roberto Alvarado'},
+    {n:15,pos:'MF',name:'Luis Romo'},
+    {n:16,pos:'MF',name:'Luis Chávez'},
+    {n:17,pos:'MF',name:'Érik Lira'},
+    {n:18,pos:'MF',name:'Brian Gutiérrez'},
+    {n:19,pos:'MF',name:'Obed Vargas'},
+    {n:20,pos:'MF',name:'Álvaro Fidalgo'},
+    {n:9,pos:'FW',name:'Raúl Jiménez'},
+    {n:10,pos:'FW',name:'Alexis Vega'},
+    {n:11,pos:'FW',name:'Santiago Giménez'},
+    {n:21,pos:'FW',name:'César Huerta'},
+    {n:24,pos:'FW',name:'Julián Quiñones'},
+    {n:25,pos:'FW',name:'Guillermo Martínez'},
+    {n:26,pos:'FW',name:'Armando González'},
+  ],
+  '🇿🇦 Sudáfrica': [
+    {n:1,pos:'GK',name:'Ronwen Williams'},
+    {n:23,pos:'GK',name:'Ricardo Goss'},
+    {n:12,pos:'GK',name:'Sipho Chaine'},
+    {n:2,pos:'DF',name:'Aubrey Modiba'},
+    {n:3,pos:'DF',name:'Khuliso Mudau'},
+    {n:5,pos:'DF',name:'Nkosinathi Sibisi'},
+    {n:6,pos:'DF',name:'Mbekezeli Mbokazi'},
+    {n:4,pos:'DF',name:'Ime Okon'},
+    {n:14,pos:'DF',name:'Teboho Mokoena'},
+    {n:8,pos:'MF',name:'Sphephelo Sithole'},
+    {n:16,pos:'MF',name:'Thalente Mbatha'},
+    {n:7,pos:'FW',name:'Themba Zwane'},
+    {n:9,pos:'FW',name:'Lyle Foster'},
+    {n:11,pos:'FW',name:'Evidence Makgopa'},
+    {n:10,pos:'FW',name:'Oswin Appollis'},
+    {n:13,pos:'FW',name:'Relebohile Mofokeng'},
+  ],
+  '🇰🇷 Corea del Sur': [
+    {n:1,pos:'GK',name:'Kim Seung-gyu'},
+    {n:21,pos:'GK',name:'Jo Hyeon-woo'},
+    {n:31,pos:'GK',name:'Song Bum-keun'},
+    {n:3,pos:'DF',name:'Kim Min-jae'},
+    {n:2,pos:'DF',name:'Kim Moon-hwan'},
+    {n:5,pos:'DF',name:'Seol Young-woo'},
+    {n:4,pos:'DF',name:'Lee Tae-seok'},
+    {n:14,pos:'MF',name:'Lee Jae-sung'},
+    {n:11,pos:'MF',name:'Hwang Hee-chan'},
+    {n:16,pos:'MF',name:'Hwang In-beom'},
+    {n:10,pos:'MF',name:'Lee Kang-in'},
+    {n:7,pos:'MF',name:'Paik Seung-ho'},
+    {n:9,pos:'FW',name:'Son Heung-min'},
+    {n:20,pos:'FW',name:'Cho Gue-sung'},
+    {n:17,pos:'FW',name:'Oh Hyeon-gyu'},
+  ],
+  '🇨🇿 Chequia': [
+    {n:1,pos:'GK',name:'Matěj Kovář'},
+    {n:23,pos:'GK',name:'Jindřich Staněk'},
+    {n:2,pos:'DF',name:'Vladimír Coufal'},
+    {n:5,pos:'DF',name:'Ladislav Krejčí'},
+    {n:4,pos:'DF',name:'Tomáš Holeš'},
+    {n:6,pos:'DF',name:'David Zima'},
+    {n:8,pos:'MF',name:'Tomáš Souček'},
+    {n:15,pos:'MF',name:'Lukáš Provod'},
+    {n:17,pos:'MF',name:'Michal Sadílek'},
+    {n:18,pos:'MF',name:'Pavel Šulc'},
+    {n:9,pos:'FW',name:'Patrik Schick'},
+    {n:10,pos:'FW',name:'Adam Hložek'},
+    {n:11,pos:'FW',name:'Jan Kuchta'},
+    {n:19,pos:'FW',name:'Mojmír Chytil'},
+  ],
+  '🇨🇦 Canadá': [
+    {n:1,pos:'GK',name:'Dayne St. Clair'},
+    {n:16,pos:'GK',name:'Maxime Crépeau'},
+    {n:18,pos:'GK',name:'Owen Goodman'},
+    {n:19,pos:'DF',name:'Alphonso Davies'},
+    {n:2,pos:'DF',name:'Alistair Johnston'},
+    {n:13,pos:'DF',name:'Derek Cornelius'},
+    {n:22,pos:'DF',name:'Richie Laryea'},
+    {n:15,pos:'DF',name:'Moïse Bombito'},
+    {n:7,pos:'MF',name:'Stephen Eustáquio'},
+    {n:8,pos:'MF',name:'Ismaël Koné'},
+    {n:6,pos:'MF',name:'Mathieu Choinière'},
+    {n:17,pos:'MF',name:'Tajon Buchanan'},
+    {n:21,pos:'MF',name:'Jonathan Osorio'},
+    {n:10,pos:'FW',name:'Jonathan David'},
+    {n:9,pos:'FW',name:'Cyle Larin'},
+    {n:14,pos:'MF',name:'Jacob Shaffelburg'},
+    {n:25,pos:'MF',name:'Nathan Saliba'},
+  ],
+  '🇧🇦 Bosnia y Herz.': [
+    {n:1,pos:'GK',name:'Nikola Vasilj'},
+    {n:3,pos:'DF',name:'Sead Kolašinac'},
+    {n:5,pos:'DF',name:'Dennis Hadžikadunić'},
+    {n:2,pos:'DF',name:'Amar Dedić'},
+    {n:4,pos:'DF',name:'Nikola Katić'},
+    {n:7,pos:'MF',name:'Amir Hadžiahmetović'},
+    {n:8,pos:'MF',name:'Benjamin Tahirović'},
+    {n:10,pos:'MF',name:'Armin Gigović'},
+    {n:15,pos:'MF',name:'Esmir Bajraktarević'},
+    {n:9,pos:'FW',name:'Edin Džeko'},
+    {n:11,pos:'FW',name:'Ermedin Demirović'},
+    {n:14,pos:'FW',name:'Haris Tabaković'},
+  ],
+  '🇶🇦 Qatar': [
+    {n:1,pos:'GK',name:'Mahmud Abunada'},
+    {n:22,pos:'GK',name:'Meshaal Barsham'},
+    {n:2,pos:'DF',name:'Pedro Miguel'},
+    {n:3,pos:'DF',name:'Lucas Mendes'},
+    {n:16,pos:'DF',name:'Boualem Khoukhi'},
+    {n:14,pos:'DF',name:'Homam Ahmed'},
+    {n:6,pos:'MF',name:'Abdulaziz Hatem'},
+    {n:5,pos:'MF',name:'Jassem Gaber'},
+    {n:12,pos:'MF',name:'Karim Boudiaf'},
+    {n:23,pos:'MF',name:'Assim Madibo'},
+    {n:10,pos:'FW',name:'Hassan Al-Haydos'},
+    {n:11,pos:'FW',name:'Akram Afif'},
+    {n:19,pos:'FW',name:'Almoez Ali'},
+    {n:9,pos:'FW',name:'Mohammed Muntari'},
+    {n:7,pos:'FW',name:'Ahmed Alaaeldin'},
+  ],
+  '🇨🇭 Suiza': [
+    {n:1,pos:'GK',name:'Gregor Kobel'},
+    {n:12,pos:'GK',name:'Yvon Mvogo'},
+    {n:5,pos:'DF',name:'Manuel Akanji'},
+    {n:4,pos:'DF',name:'Nico Elvedi'},
+    {n:13,pos:'DF',name:'Ricardo Rodriguez'},
+    {n:3,pos:'DF',name:'Silvan Widmer'},
+    {n:2,pos:'DF',name:'Miro Muheim'},
+    {n:10,pos:'MF',name:'Granit Xhaka'},
+    {n:6,pos:'MF',name:'Denis Zakaria'},
+    {n:8,pos:'MF',name:'Remo Freuler'},
+    {n:15,pos:'MF',name:'Djibril Sow'},
+    {n:14,pos:'MF',name:'Ardon Jashari'},
+    {n:22,pos:'MF',name:'Fabian Rieder'},
+    {n:7,pos:'FW',name:'Breel Embolo'},
+    {n:11,pos:'FW',name:'Dan Ndoye'},
+    {n:17,pos:'FW',name:'Rubén Vargas'},
+    {n:23,pos:'FW',name:'Zeki Amdouni'},
+    {n:19,pos:'FW',name:'Noah Okafor'},
+  ],
+  '🇧🇷 Brasil': [
+    {n:1,pos:'GK',name:'Alisson'},
+    {n:23,pos:'GK',name:'Ederson'},
+    {n:12,pos:'GK',name:'Weverton'},
+    {n:4,pos:'DF',name:'Marquinhos'},
+    {n:3,pos:'DF',name:'Gabriel Magalhães'},
+    {n:2,pos:'DF',name:'Wesley'},
+    {n:6,pos:'DF',name:'Alex Sandro'},
+    {n:13,pos:'DF',name:'Danilo Luiz'},
+    {n:14,pos:'DF',name:'Bremer'},
+    {n:5,pos:'MF',name:'Casemiro'},
+    {n:8,pos:'MF',name:'Bruno Guimarães'},
+    {n:20,pos:'MF',name:'Lucas Paquetá'},
+    {n:17,pos:'MF',name:'Fabinho'},
+    {n:7,pos:'FW',name:'Vinícius Júnior'},
+    {n:10,pos:'FW',name:'Neymar'},
+    {n:11,pos:'FW',name:'Raphinha'},
+    {n:9,pos:'FW',name:'Matheus Cunha'},
+    {n:22,pos:'FW',name:'Gabriel Martinelli'},
+    {n:19,pos:'FW',name:'Endrick'},
+    {n:21,pos:'FW',name:'Luiz Henrique'},
+  ],
+  '🇲🇦 Marruecos': [
+    {n:1,pos:'GK',name:'Yassine Bounou'},
+    {n:16,pos:'GK',name:'Munir Mohamedi'},
+    {n:4,pos:'DF',name:'Achraf Hakimi'},
+    {n:3,pos:'DF',name:'Noussair Mazraoui'},
+    {n:6,pos:'DF',name:'Romain Saïss'},
+    {n:5,pos:'DF',name:'Nayef Aguerd'},
+    {n:22,pos:'DF',name:'Yahya Attiyat Allah'},
+    {n:8,pos:'MF',name:'Azzedine Ounahi'},
+    {n:7,pos:'MF',name:'Sofyan Amrabat'},
+    {n:15,pos:'MF',name:'Selim Amallah'},
+    {n:18,pos:'MF',name:'Ilias Chair'},
+    {n:11,pos:'FW',name:'Hakim Ziyech'},
+    {n:9,pos:'FW',name:'Youssef En-Nesyri'},
+    {n:10,pos:'FW',name:'Brahim Díaz'},
+    {n:17,pos:'FW',name:'Sofiane Boufal'},
+    {n:14,pos:'FW',name:'Abdessamad Ezzalzouli'},
+  ],
+  '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia': [
+    {n:1,pos:'GK',name:'Craig Gordon'},
+    {n:13,pos:'GK',name:'Angus Gunn'},
+    {n:2,pos:'DF',name:'Anthony Ralston'},
+    {n:5,pos:'DF',name:'Grant Hanley'},
+    {n:6,pos:'DF',name:'Jack Hendry'},
+    {n:3,pos:'DF',name:'Andrew Robertson'},
+    {n:4,pos:'DF',name:'Kieran Tierney'},
+    {n:8,pos:'MF',name:'Callum McGregor'},
+    {n:7,pos:'MF',name:'John McGinn'},
+    {n:14,pos:'MF',name:'Billy Gilmour'},
+    {n:15,pos:'MF',name:'Ryan Christie'},
+    {n:10,pos:'FW',name:'Che Adams'},
+    {n:9,pos:'FW',name:'Lawrence Shankland'},
+    {n:11,pos:'FW',name:'Ryan Fraser'},
+    {n:17,pos:'FW',name:'Stuart Armstrong'},
+  ],
+  '🇭🇹 Haití': [
+    {n:1,pos:'GK',name:'Johny Placide'},
+    {n:2,pos:'DF',name:'Florent Sanson'},
+    {n:5,pos:'DF',name:'Mechack Jérôme'},
+    {n:6,pos:'DF',name:'Rudy Gestede'},
+    {n:3,pos:'DF',name:'Mickaël Cantave'},
+    {n:8,pos:'MF',name:'Réginald Goreux'},
+    {n:7,pos:'MF',name:'Pascal Millien'},
+    {n:10,pos:'MF',name:'Duckens Nazon'},
+    {n:11,pos:'FW',name:'Frantzdy Pierrot'},
+    {n:9,pos:'FW',name:'Dario Cardozo'},
+  ],
+  '🇺🇸 USA': [
+    {n:1,pos:'GK',name:'Matt Turner'},
+    {n:18,pos:'GK',name:'Chris Brady'},
+    {n:2,pos:'DF',name:'Sergino Dest'},
+    {n:5,pos:'DF',name:'Tim Ream'},
+    {n:3,pos:'DF',name:'Antonee Robinson'},
+    {n:4,pos:'DF',name:'Tyler Adams'},
+    {n:6,pos:'DF',name:'Chris Richards'},
+    {n:8,pos:'MF',name:'Weston McKennie'},
+    {n:7,pos:'MF',name:'Giovanni Reyna'},
+    {n:13,pos:'MF',name:'Luca de la Torre'},
+    {n:14,pos:'MF',name:'Yunus Musah'},
+    {n:10,pos:'FW',name:'Christian Pulisic'},
+    {n:9,pos:'FW',name:'Josh Sargent'},
+    {n:11,pos:'FW',name:'Folarin Balogun'},
+    {n:17,pos:'FW',name:'Ricardo Pepi'},
+    {n:19,pos:'FW',name:'Brenden Aaronson'},
+  ],
+  '🇵🇾 Paraguay': [
+    {n:1,pos:'GK',name:'Gastón Olveira'},
+    {n:2,pos:'DF',name:'Robert Rojas'},
+    {n:3,pos:'DF',name:'Gustavo Gómez'},
+    {n:4,pos:'DF',name:'Omar Alderete'},
+    {n:5,pos:'DF',name:'Junior Alonso'},
+    {n:8,pos:'MF',name:'Andrés Cubas'},
+    {n:6,pos:'MF',name:'Mathías Villasanti'},
+    {n:10,pos:'MF',name:'Ángel Romero'},
+    {n:7,pos:'MF',name:'Miguel Almirón'},
+    {n:11,pos:'FW',name:'Julio Enciso'},
+    {n:9,pos:'FW',name:'Antonio Sanabria'},
+    {n:17,pos:'FW',name:'Alejandro Romero Gamarra'},
+  ],
+  '🇦🇺 Australia': [
+    {n:1,pos:'GK',name:'Mathew Ryan'},
+    {n:2,pos:'DF',name:'Milos Degenek'},
+    {n:5,pos:'DF',name:'Harry Souttar'},
+    {n:3,pos:'DF',name:'Aziz Behich'},
+    {n:4,pos:'DF',name:'Cameron Burgess'},
+    {n:8,pos:'MF',name:'Jackson Irvine'},
+    {n:7,pos:'MF',name:'Ajdin Hrustic'},
+    {n:6,pos:'MF',name:'Cameron Devlin'},
+    {n:10,pos:'FW',name:'Mathew Leckie'},
+    {n:11,pos:'FW',name:'Awer Mabil'},
+    {n:9,pos:'FW',name:'Nestory Irankunda'},
+    {n:13,pos:'FW',name:'Cristian Volpato'},
+  ],
+  '🇹🇷 Turquía': [
+    {n:1,pos:'GK',name:'Altay Bayındır'},
+    {n:12,pos:'GK',name:'Mert Günok'},
+    {n:2,pos:'DF',name:'Zeki Çelik'},
+    {n:3,pos:'DF',name:'Ferdi Kadıoğlu'},
+    {n:4,pos:'DF',name:'Samet Akaydin'},
+    {n:5,pos:'DF',name:'Kaan Ayhan'},
+    {n:6,pos:'DF',name:'Merih Demiral'},
+    {n:8,pos:'MF',name:'Hakan Çalhanoğlu'},
+    {n:7,pos:'MF',name:'Kerem Aktürkoğlu'},
+    {n:14,pos:'MF',name:'Salih Özcan'},
+    {n:15,pos:'MF',name:'Orkun Kökçü'},
+    {n:10,pos:'FW',name:'Arda Güler'},
+    {n:9,pos:'FW',name:'Cenk Tosun'},
+    {n:11,pos:'FW',name:'Yılmaz Sarı'},
+    {n:17,pos:'FW',name:'Baris Yilmaz'},
+  ],
+  '🇩🇪 Alemania': [
+    {n:1,pos:'GK',name:'Manuel Neuer'},
+    {n:12,pos:'GK',name:'Marc-André ter Stegen'},
+    {n:2,pos:'DF',name:'Joshua Kimmich'},
+    {n:4,pos:'DF',name:'Jonathan Tah'},
+    {n:5,pos:'DF',name:'Nico Schlotterbeck'},
+    {n:3,pos:'DF',name:'David Raum'},
+    {n:6,pos:'DF',name:'Robert Andrich'},
+    {n:8,pos:'MF',name:'Toni Kroos'},
+    {n:7,pos:'MF',name:'Florian Wirtz'},
+    {n:14,pos:'MF',name:'Jamal Musiala'},
+    {n:15,pos:'MF',name:'Leon Goretzka'},
+    {n:10,pos:'FW',name:'Kai Havertz'},
+    {n:9,pos:'FW',name:'Niclas Füllkrug'},
+    {n:11,pos:'FW',name:'Leroy Sané'},
+    {n:13,pos:'FW',name:'Thomas Müller'},
+    {n:17,pos:'FW',name:'Deniz Undav'},
+  ],
+  '🇨🇼 Curazao': [
+    {n:1,pos:'GK',name:'Eloy Room'},
+    {n:2,pos:'DF',name:'Cuco Martina'},
+    {n:5,pos:'DF',name:'Jurien Gaari'},
+    {n:3,pos:'DF',name:'Vurnon Anita'},
+    {n:7,pos:'MF',name:'Leandro Bacuna'},
+    {n:8,pos:'MF',name:'Gilermo Suarez'},
+    {n:10,pos:'FW',name:'Juninho'},
+    {n:9,pos:'FW',name:'Jarchinio Antonia'},
+    {n:11,pos:'FW',name:'Cédric Mabunda'},
+  ],
+  '🇳🇱 Países Bajos': [
+    {n:1,pos:'GK',name:'Bart Verbruggen'},
+    {n:13,pos:'GK',name:'Mark Flekken'},
+    {n:2,pos:'DF',name:'Denzel Dumfries'},
+    {n:4,pos:'DF',name:'Virgil van Dijk'},
+    {n:3,pos:'DF',name:'Nathan Aké'},
+    {n:5,pos:'DF',name:'Stefan de Vrij'},
+    {n:6,pos:'DF',name:'Matthijs de Ligt'},
+    {n:8,pos:'MF',name:'Frenkie de Jong'},
+    {n:7,pos:'MF',name:'Steven Bergwijn'},
+    {n:14,pos:'MF',name:'Tijjani Reijnders'},
+    {n:21,pos:'MF',name:'Georginio Wijnaldum'},
+    {n:10,pos:'FW',name:'Memphis Depay'},
+    {n:9,pos:'FW',name:'Wout Weghorst'},
+    {n:11,pos:'FW',name:'Cody Gakpo'},
+    {n:17,pos:'FW',name:'Donyell Malen'},
+  ],
+  '🇯🇵 Japón': [
+    {n:1,pos:'GK',name:'Shuichi Gonda'},
+    {n:12,pos:'GK',name:'Zion Suzuki'},
+    {n:2,pos:'DF',name:'Hiroki Sakai'},
+    {n:5,pos:'DF',name:'Takehiro Tomiyasu'},
+    {n:3,pos:'DF',name:'Yuto Nagatomo'},
+    {n:4,pos:'DF',name:'Ko Itakura'},
+    {n:6,pos:'DF',name:'Wataru Endo'},
+    {n:8,pos:'MF',name:'Hidemasa Morita'},
+    {n:7,pos:'MF',name:'Junya Ito'},
+    {n:14,pos:'MF',name:'Daichi Kamada'},
+    {n:10,pos:'MF',name:'Takumi Minamino'},
+    {n:9,pos:'FW',name:'Ayase Ueda'},
+    {n:11,pos:'FW',name:'Kaoru Mitoma'},
+    {n:15,pos:'FW',name:'Ritsu Doan'},
+    {n:17,pos:'FW',name:'Ao Tanaka'},
+  ],
+  '🇸🇪 Suecia': [
+    {n:1,pos:'GK',name:'Robin Olsen'},
+    {n:13,pos:'GK',name:'Karl-Johan Johnsson'},
+    {n:2,pos:'DF',name:'Mikael Lustig'},
+    {n:5,pos:'DF',name:'Victor Lindelöf'},
+    {n:3,pos:'DF',name:'Ludwig Augustinsson'},
+    {n:4,pos:'DF',name:'Marcus Danielson'},
+    {n:8,pos:'MF',name:'Albin Ekdal'},
+    {n:6,pos:'MF',name:'Emil Forsberg'},
+    {n:7,pos:'MF',name:'Viktor Claesson'},
+    {n:10,pos:'FW',name:'Dejan Kulusevski'},
+    {n:9,pos:'FW',name:'Viktor Gyökeres'},
+    {n:11,pos:'FW',name:'Alexander Isak'},
+    {n:17,pos:'FW',name:'Jordan Larsson'},
+  ],
+  '🇹🇳 Túnez': [
+    {n:1,pos:'GK',name:'Aymen Dahmen'},
+    {n:2,pos:'DF',name:'Montassar Talbi'},
+    {n:5,pos:'DF',name:'Dylan Bronn'},
+    {n:3,pos:'DF',name:'Ali Maâloul'},
+    {n:4,pos:'DF',name:'Yassine Meriah'},
+    {n:8,pos:'MF',name:'Aissa Laidouni'},
+    {n:6,pos:'MF',name:'Ellyes Skhiri'},
+    {n:7,pos:'MF',name:'Wahbi Khazri'},
+    {n:10,pos:'MF',name:'Hannibal Mejbri'},
+    {n:9,pos:'FW',name:'Seifeddine Jaziri'},
+    {n:11,pos:'FW',name:'Sayfallah Ltaief'},
+    {n:14,pos:'FW',name:'Issam Jebali'},
+  ],
+  '🇨🇮 Costa de Marfil': [
+    {n:1,pos:'GK',name:'Yahia Fofana'},
+    {n:23,pos:'GK',name:'Badra Sangaré'},
+    {n:2,pos:'DF',name:'Serge Aurier'},
+    {n:3,pos:'DF',name:'Eric Bailly'},
+    {n:5,pos:'DF',name:'Wilfried Singo'},
+    {n:4,pos:'DF',name:'Odilon Kossounou'},
+    {n:8,pos:'MF',name:'Jean Michaël Seri'},
+    {n:6,pos:'MF',name:'Ibrahim Sangaré'},
+    {n:7,pos:'MF',name:'Franck Kessié'},
+    {n:10,pos:'FW',name:'Sébastien Haller'},
+    {n:9,pos:'FW',name:'Nicolas Pépé'},
+    {n:11,pos:'FW',name:'Simon Adingra'},
+    {n:17,pos:'FW',name:'Wilfried Zaha'},
+  ],
+  '🇪🇨 Ecuador': [
+    {n:1,pos:'GK',name:'Hernán Galíndez'},
+    {n:2,pos:'DF',name:'Angelo Preciado'},
+    {n:3,pos:'DF',name:'Pervis Estupiñán'},
+    {n:5,pos:'DF',name:'William Pacho'},
+    {n:4,pos:'DF',name:'Piero Hincapié'},
+    {n:8,pos:'MF',name:'Carlos Gruezo'},
+    {n:6,pos:'MF',name:'Jhegson Méndez'},
+    {n:7,pos:'MF',name:'Gonzalo Plata'},
+    {n:14,pos:'MF',name:'Moisés Caicedo'},
+    {n:10,pos:'FW',name:'Jeremy Sarmiento'},
+    {n:9,pos:'FW',name:'Enner Valencia'},
+    {n:11,pos:'FW',name:'Michael Estrada'},
+    {n:17,pos:'FW',name:'Leonardo Campana'},
+  ],
+  '🇪🇸 España': [
+    {n:1,pos:'GK',name:'David Raya'},
+    {n:13,pos:'GK',name:'Unai Simón'},
+    {n:2,pos:'DF',name:'Dani Carvajal'},
+    {n:4,pos:'DF',name:'Nacho Fernández'},
+    {n:3,pos:'DF',name:'Alejandro Balde'},
+    {n:5,pos:'DF',name:'Robin Le Normand'},
+    {n:23,pos:'DF',name:'Marc Cucurella'},
+    {n:8,pos:'MF',name:'Pedri'},
+    {n:6,pos:'MF',name:'Rodri'},
+    {n:16,pos:'MF',name:'Martín Zubimendi'},
+    {n:15,pos:'MF',name:'Mikel Merino'},
+    {n:14,pos:'MF',name:'Fabián Ruiz'},
+    {n:10,pos:'FW',name:'Dani Olmo'},
+    {n:7,pos:'FW',name:'Álvaro Morata'},
+    {n:9,pos:'FW',name:'Joselu'},
+    {n:11,pos:'FW',name:'Ferran Torres'},
+    {n:17,pos:'FW',name:'Lamine Yamal'},
+    {n:22,pos:'FW',name:'Nico Williams'},
+  ],
+  '🇨🇻 Cabo Verde': [
+    {n:1,pos:'GK',name:'Vozinha'},
+    {n:2,pos:'DF',name:'Stopira'},
+    {n:5,pos:'DF',name:'Steven Fortes'},
+    {n:3,pos:'DF',name:'Diney'},
+    {n:8,pos:'MF',name:'Kenny Rocha'},
+    {n:6,pos:'MF',name:'Garry Rodrigues'},
+    {n:7,pos:'MF',name:'Cláudio Winck'},
+    {n:10,pos:'FW',name:'Ryan Mendes'},
+    {n:9,pos:'FW',name:'Djaniny'},
+    {n:11,pos:'FW',name:'Willy Semedo'},
+  ],
+  '🇸🇦 Arabia Saudita': [
+    {n:1,pos:'GK',name:'Mohammed Al-Owais'},
+    {n:2,pos:'DF',name:'Sultan Al-Ghannam'},
+    {n:5,pos:'DF',name:'Ali Al-Bulaihi'},
+    {n:3,pos:'DF',name:'Yasser Al-Shahrani'},
+    {n:6,pos:'DF',name:'Abdulelah Al-Amri'},
+    {n:8,pos:'MF',name:'Sami Al-Najei'},
+    {n:7,pos:'MF',name:'Abdullah Al-Hamdan'},
+    {n:10,pos:'MF',name:'Saleh Al-Shehri'},
+    {n:14,pos:'MF',name:'Mohamed Kanno'},
+    {n:9,pos:'FW',name:'Firas Al-Buraikan'},
+    {n:11,pos:'FW',name:'Marwan Al-Sahafi'},
+    {n:17,pos:'FW',name:'Fahad Al-Muwallad'},
+  ],
+  '🇺🇾 Uruguay': [
+    {n:1,pos:'GK',name:'Sergio Rochet'},
+    {n:23,pos:'GK',name:'Fernando Muslera'},
+    {n:2,pos:'DF',name:'Néstor Araújo'},
+    {n:3,pos:'DF',name:'Mathías Olivera'},
+    {n:4,pos:'DF',name:'Ronald Araújo'},
+    {n:6,pos:'DF',name:'José María Giménez'},
+    {n:5,pos:'DF',name:'Diego Godín'},
+    {n:8,pos:'MF',name:'Rodrigo Bentancur'},
+    {n:7,pos:'MF',name:'Giorgian De Arrascaeta'},
+    {n:14,pos:'MF',name:'Lucas Torreira'},
+    {n:15,pos:'MF',name:'Federico Valverde'},
+    {n:10,pos:'FW',name:'Giorgian De Arrascaeta'},
+    {n:9,pos:'FW',name:'Edinson Cavani'},
+    {n:11,pos:'FW',name:'Darwin Núñez'},
+    {n:21,pos:'FW',name:'Maximiliano Araújo'},
+  ],
+  '🇧🇪 Bélgica': [
+    {n:1,pos:'GK',name:'Koen Casteels'},
+    {n:13,pos:'GK',name:'Matz Sels'},
+    {n:2,pos:'DF',name:'Timothy Castagne'},
+    {n:4,pos:'DF',name:'Toby Alderweireld'},
+    {n:3,pos:'DF',name:'Leander Dendoncker'},
+    {n:5,pos:'DF',name:'Jan Vertonghen'},
+    {n:6,pos:'DF',name:'Axel Witsel'},
+    {n:8,pos:'MF',name:'Youri Tielemans'},
+    {n:7,pos:'MF',name:'Kevin De Bruyne'},
+    {n:14,pos:'MF',name:'Amadou Onana'},
+    {n:15,pos:'MF',name:'Hans Vanaken'},
+    {n:10,pos:'FW',name:'Eden Hazard'},
+    {n:9,pos:'FW',name:'Romelu Lukaku'},
+    {n:11,pos:'FW',name:'Dodi Lukebakio'},
+    {n:17,pos:'FW',name:'Leandro Trossard'},
+    {n:22,pos:'FW',name:'Lois Openda'},
+  ],
+  '🇪🇬 Egipto': [
+    {n:1,pos:'GK',name:'Mohamed El-Shennawy'},
+    {n:2,pos:'DF',name:'Ahmed Hegazi'},
+    {n:5,pos:'DF',name:'Omar Kamal'},
+    {n:3,pos:'DF',name:'Omar Gaber'},
+    {n:4,pos:'DF',name:'Karim Fouad'},
+    {n:8,pos:'MF',name:'Hamdi Fathi'},
+    {n:6,pos:'MF',name:'Tarek Hamed'},
+    {n:10,pos:'MF',name:'Mohamed Salah'},
+    {n:7,pos:'MF',name:'Amr El-Sulaya'},
+    {n:9,pos:'FW',name:'Omar Marmoush'},
+    {n:11,pos:'FW',name:'Mostafa Mohamed'},
+    {n:17,pos:'FW',name:'Zizo'},
+  ],
+  '🇮🇷 Irán': [
+    {n:1,pos:'GK',name:'Alireza Beiranvand'},
+    {n:2,pos:'DF',name:'Sadegh Moharrami'},
+    {n:5,pos:'DF',name:'Majid Hosseini'},
+    {n:3,pos:'DF',name:'Ehsan Hajsafi'},
+    {n:4,pos:'DF',name:'Shoja Khalilzadeh'},
+    {n:8,pos:'MF',name:'Saeid Ezatolahi'},
+    {n:6,pos:'MF',name:'Alireza Jahanbakhsh'},
+    {n:7,pos:'MF',name:'Ali Gholizadeh'},
+    {n:10,pos:'MF',name:'Mehdi Torabi'},
+    {n:9,pos:'FW',name:'Sardar Azmoun'},
+    {n:11,pos:'FW',name:'Karim Ansarifard'},
+    {n:17,pos:'FW',name:'Mehdi Taremi'},
+  ],
+  '🇳🇿 Nueva Zelanda': [
+    {n:1,pos:'GK',name:'Oli Sail'},
+    {n:2,pos:'DF',name:'Liberato Cacace'},
+    {n:5,pos:'DF',name:'Winston Reid'},
+    {n:3,pos:'DF',name:'Nando Pijnaker'},
+    {n:8,pos:'MF',name:'Callum McCowatt'},
+    {n:6,pos:'MF',name:'Elijah Just'},
+    {n:7,pos:'MF',name:'Marco Rojas'},
+    {n:10,pos:'MF',name:'Clayton Lewis'},
+    {n:9,pos:'FW',name:'Hamish Watson'},
+    {n:11,pos:'FW',name:'Chris Wood'},
+    {n:17,pos:'FW',name:'Ryan De Vries'},
+  ],
+  '🇫🇷 Francia': [
+    {n:1,pos:'GK',name:'Mike Maignan'},
+    {n:23,pos:'GK',name:'Brice Samba'},
+    {n:2,pos:'DF',name:'Malo Gusto'},
+    {n:5,pos:'DF',name:'Jules Koundé'},
+    {n:3,pos:'DF',name:'Théo Hernández'},
+    {n:4,pos:'DF',name:'William Saliba'},
+    {n:24,pos:'DF',name:'Ibrahima Konaté'},
+    {n:6,pos:'DF',name:'Lucas Hernández'},
+    {n:8,pos:'MF',name:'Aurélien Tchouaméni'},
+    {n:14,pos:'MF',name:'Adrien Rabiot'},
+    {n:6,pos:'MF',name:'N\'Golo Kanté'},
+    {n:15,pos:'MF',name:'Warren Zaïre-Emery'},
+    {n:7,pos:'FW',name:'Ousmane Dembélé'},
+    {n:10,pos:'FW',name:'Kylian Mbappé'},
+    {n:9,pos:'FW',name:'Olivier Giroud'},
+    {n:11,pos:'FW',name:'Bradley Barcola'},
+    {n:17,pos:'FW',name:'Rayan Cherki'},
+  ],
+  '🇸🇳 Senegal': [
+    {n:1,pos:'GK',name:'Édouard Mendy'},
+    {n:23,pos:'GK',name:'Alfred Gomis'},
+    {n:2,pos:'DF',name:'Bouna Sarr'},
+    {n:5,pos:'DF',name:'Kalidou Koulibaly'},
+    {n:3,pos:'DF',name:'Saliou Ciss'},
+    {n:4,pos:'DF',name:'Abdou Diallo'},
+    {n:8,pos:'MF',name:'Idrissa Gueye'},
+    {n:6,pos:'MF',name:'Cheikhou Kouyaté'},
+    {n:7,pos:'MF',name:'Nampalys Mendy'},
+    {n:10,pos:'FW',name:'Sadio Mané'},
+    {n:9,pos:'FW',name:'Boulaye Dia'},
+    {n:11,pos:'FW',name:'Ismaïla Sarr'},
+    {n:17,pos:'FW',name:'Nicolas Jackson'},
+    {n:19,pos:'FW',name:'Habib Diallo'},
+  ],
+  '🇳🇴 Noruega': [
+    {n:1,pos:'GK',name:'Ørjan Nyland'},
+    {n:22,pos:'GK',name:'Sascha Burchert'},
+    {n:2,pos:'DF',name:'Kristoffer Ajer'},
+    {n:5,pos:'DF',name:'Leo Skiri Østigård'},
+    {n:3,pos:'DF',name:'Birger Meling'},
+    {n:4,pos:'DF',name:'Andreas Hanche-Olsen'},
+    {n:8,pos:'MF',name:'Sander Berge'},
+    {n:6,pos:'MF',name:'Mathias Normann'},
+    {n:7,pos:'MF',name:'Martin Ødegaard'},
+    {n:14,pos:'MF',name:'Fredrik Aursnes'},
+    {n:10,pos:'FW',name:'Mohamed Elyounoussi'},
+    {n:9,pos:'FW',name:'Erling Haaland'},
+    {n:11,pos:'FW',name:'Alexander Sørloth'},
+    {n:17,pos:'FW',name:'Jens Petter Hauge'},
+  ],
+  '🇮🇶 Iraq': [
+    {n:1,pos:'GK',name:'Jalal Hassan'},
+    {n:2,pos:'DF',name:'Ali Adnan'},
+    {n:5,pos:'DF',name:'Ahmed Ibrahim'},
+    {n:3,pos:'DF',name:'Rebin Sulaka'},
+    {n:8,pos:'MF',name:'Amjad Attwan'},
+    {n:6,pos:'MF',name:'Mohanad Ali'},
+    {n:7,pos:'MF',name:'Hossam Musa'},
+    {n:10,pos:'FW',name:'Humam Tariq'},
+    {n:9,pos:'FW',name:'Aymen Hussein'},
+    {n:11,pos:'FW',name:'Mohanad Lateef'},
+  ],
+  '🇦🇷 Argentina': [
+    {n:1,pos:'GK',name:'Emiliano Martínez'},
+    {n:12,pos:'GK',name:'Juan Musso'},
+    {n:2,pos:'DF',name:'Gonzalo Montiel'},
+    {n:3,pos:'DF',name:'Nicolás Tagliafico'},
+    {n:4,pos:'DF',name:'Germán Pezzella'},
+    {n:6,pos:'DF',name:'Lisandro Martínez'},
+    {n:13,pos:'DF',name:'Cristian Romero'},
+    {n:19,pos:'DF',name:'Nicolás Otamendi'},
+    {n:8,pos:'MF',name:'Enzo Fernández'},
+    {n:5,pos:'MF',name:'Leandro Paredes'},
+    {n:7,pos:'MF',name:'Rodrigo De Paul'},
+    {n:14,pos:'MF',name:'Exequiel Palacios'},
+    {n:25,pos:'MF',name:'Alexis Mac Allister'},
+    {n:10,pos:'FW',name:'Lionel Messi'},
+    {n:9,pos:'FW',name:'Julián Álvarez'},
+    {n:11,pos:'FW',name:'Ángel Di María'},
+    {n:22,pos:'FW',name:'Lautaro Martínez'},
+    {n:23,pos:'FW',name:'Paulo Dybala'},
+  ],
+  '🇩🇿 Argelia': [
+    {n:1,pos:'GK',name:'Raïs M\'Bolhi'},
+    {n:2,pos:'DF',name:'Aïssa Mandi'},
+    {n:5,pos:'DF',name:'Djamel Benlamri'},
+    {n:3,pos:'DF',name:'Ramy Bensebaini'},
+    {n:4,pos:'DF',name:'Mehdi Tahrat'},
+    {n:8,pos:'MF',name:'Sofiane Feghouli'},
+    {n:6,pos:'MF',name:'Nabil Bentaleb'},
+    {n:7,pos:'MF',name:'Riyad Mahrez'},
+    {n:10,pos:'MF',name:'Youcef Atal'},
+    {n:9,pos:'FW',name:'Islam Slimani'},
+    {n:11,pos:'FW',name:'Baghdad Bounedjah'},
+    {n:14,pos:'FW',name:'Youssouf Belaïli'},
+  ],
+  '🇦🇹 Austria': [
+    {n:1,pos:'GK',name:'Patrick Pentz'},
+    {n:12,pos:'GK',name:'Alexander Schlager'},
+    {n:2,pos:'DF',name:'Stefan Posch'},
+    {n:5,pos:'DF',name:'Phillipp Mwene'},
+    {n:3,pos:'DF',name:'Philipp Lienhart'},
+    {n:4,pos:'DF',name:'Kevin Danso'},
+    {n:8,pos:'MF',name:'David Alaba'},
+    {n:6,pos:'MF',name:'Florian Grillitsch'},
+    {n:7,pos:'MF',name:'Marko Arnautovic'},
+    {n:10,pos:'MF',name:'Marcel Sabitzer'},
+    {n:14,pos:'MF',name:'Christoph Baumgartner'},
+    {n:9,pos:'FW',name:'Michael Gregoritsch'},
+    {n:11,pos:'FW',name:'Sasa Kalajdzic'},
+    {n:17,pos:'FW',name:'Guido Burgstaller'},
+  ],
+  '🇯🇴 Jordania': [
+    {n:1,pos:'GK',name:'Amer Shafi'},
+    {n:2,pos:'DF',name:'Badr Al-Rawabdeh'},
+    {n:5,pos:'DF',name:'Yazan Al-Naimat'},
+    {n:3,pos:'DF',name:'Baha\' Faisal'},
+    {n:8,pos:'MF',name:'Musa Al-Tamari'},
+    {n:6,pos:'MF',name:'Mousa Al-Taamari'},
+    {n:7,pos:'MF',name:'Yaser Asprilla'},
+    {n:10,pos:'FW',name:'Yazan Al-Arab'},
+    {n:9,pos:'FW',name:'Mahmoud Dashti'},
+    {n:11,pos:'FW',name:'Ahmad Ababneh'},
+  ],
+  '🇵🇹 Portugal': [
+    {n:1,pos:'GK',name:'Rui Patrício'},
+    {n:12,pos:'GK',name:'Diogo Costa'},
+    {n:2,pos:'DF',name:'João Cancelo'},
+    {n:3,pos:'DF',name:'Nuno Mendes'},
+    {n:4,pos:'DF',name:'Rúben Dias'},
+    {n:5,pos:'DF',name:'Pepe'},
+    {n:6,pos:'DF',name:'Danilo Pereira'},
+    {n:8,pos:'MF',name:'João Moutinho'},
+    {n:14,pos:'MF',name:'William Carvalho'},
+    {n:16,pos:'MF',name:'Vitinha'},
+    {n:10,pos:'MF',name:'Bernardo Silva'},
+    {n:8,pos:'MF',name:'Bruno Fernandes'},
+    {n:7,pos:'FW',name:'Cristiano Ronaldo'},
+    {n:9,pos:'FW',name:'André Silva'},
+    {n:11,pos:'FW',name:'Rafael Leão'},
+    {n:17,pos:'FW',name:'Pedro Neto'},
+    {n:23,pos:'FW',name:'João Félix'},
+  ],
+  '🇺🇿 Uzbekistán': [
+    {n:1,pos:'GK',name:'Utkir Yusupov'},
+    {n:2,pos:'DF',name:'Dostonbek Khamdamov'},
+    {n:5,pos:'DF',name:'Shokhrukh Jaloliddinov'},
+    {n:3,pos:'DF',name:'Khojiakbar Alijonov'},
+    {n:8,pos:'MF',name:'Otabek Shukurov'},
+    {n:6,pos:'MF',name:'Oybek Dzaksybekov'},
+    {n:7,pos:'MF',name:'Bobur Abdixoliqov'},
+    {n:10,pos:'FW',name:'Abbosbek Fayzullaev'},
+    {n:9,pos:'FW',name:'Eldor Shomurodov'},
+    {n:11,pos:'FW',name:'Jaloliddin Masharipov'},
+    {n:17,pos:'FW',name:'Nodirbek Qodirov'},
+  ],
+  '🇨🇴 Colombia': [
+    {n:1,pos:'GK',name:'Camilo Vargas'},
+    {n:12,pos:'GK',name:'David Ospina'},
+    {n:2,pos:'DF',name:'Santiago Arias'},
+    {n:3,pos:'DF',name:'Johan Mojica'},
+    {n:4,pos:'DF',name:'Dávinson Sánchez'},
+    {n:5,pos:'DF',name:'Yerry Mina'},
+    {n:6,pos:'DF',name:'Stefan Medina'},
+    {n:8,pos:'MF',name:'Wilmar Barrios'},
+    {n:7,pos:'MF',name:'James Rodríguez'},
+    {n:14,pos:'MF',name:'Jefferson Lerma'},
+    {n:15,pos:'MF',name:'Matheus Uribe'},
+    {n:10,pos:'FW',name:'Cuadrado'},
+    {n:9,pos:'FW',name:'Radamel Falcao'},
+    {n:11,pos:'FW',name:'Luis Díaz'},
+    {n:17,pos:'FW',name:'Jhon Durán'},
+  ],
+  '🇨🇩 DR Congo': [
+    {n:1,pos:'GK',name:'Joël Kiassumbua'},
+    {n:2,pos:'DF',name:'Marcel Tisserand'},
+    {n:5,pos:'DF',name:'Chancel Mbemba'},
+    {n:3,pos:'DF',name:'Christian Luyindama'},
+    {n:8,pos:'MF',name:'Willy Boly'},
+    {n:6,pos:'MF',name:'Paul-José Mpoku'},
+    {n:7,pos:'MF',name:'Yannick Bolasie'},
+    {n:10,pos:'FW',name:'Cédric Bakambu'},
+    {n:9,pos:'FW',name:'Dieumerci Mbokani'},
+    {n:11,pos:'FW',name:'Théo Bongonda'},
+  ],
+  '🇭🇷 Croacia': [
+    {n:1,pos:'GK',name:'Dominik Livaković'},
+    {n:23,pos:'GK',name:'Ivica Ivušić'},
+    {n:2,pos:'DF',name:'Josip Juranović'},
+    {n:4,pos:'DF',name:'Joško Gvardiol'},
+    {n:3,pos:'DF',name:'Borna Sosa'},
+    {n:5,pos:'DF',name:'Duje Ćaleta-Car'},
+    {n:6,pos:'DF',name:'Dejan Lovren'},
+    {n:8,pos:'MF',name:'Mateo Kovačić'},
+    {n:7,pos:'MF',name:'Marcelo Brozović'},
+    {n:14,pos:'MF',name:'Luka Modrić'},
+    {n:15,pos:'MF',name:'Mario Pašalić'},
+    {n:10,pos:'FW',name:'Nikola Vlašić'},
+    {n:9,pos:'FW',name:'Andrej Kramarić'},
+    {n:11,pos:'FW',name:'Ivan Perišić'},
+    {n:17,pos:'FW',name:'Bruno Petković'},
+  ],
+  '🇵🇦 Panamá': [
+    {n:1,pos:'GK',name:'Luis Mejía'},
+    {n:2,pos:'DF',name:'Fidel Escobar'},
+    {n:5,pos:'DF',name:'Harold Cummings'},
+    {n:3,pos:'DF',name:'Eric Davis'},
+    {n:4,pos:'DF',name:'Anibal Godoy'},
+    {n:8,pos:'MF',name:'Adalberto Carrasquilla'},
+    {n:6,pos:'MF',name:'Edgar Bárcenas'},
+    {n:7,pos:'MF',name:'Iván Anderson'},
+    {n:10,pos:'FW',name:'Rolando Blackburn'},
+    {n:9,pos:'FW',name:'Ismael Díaz'},
+    {n:11,pos:'FW',name:'Alberto Quintero'},
+  ],
+  '🇬🇭 Ghana': [
+    {n:1,pos:'GK',name:'Lawrence Ati-Zigi'},
+    {n:22,pos:'GK',name:'Jojo Wollacott'},
+    {n:2,pos:'DF',name:'Daniel Amartey'},
+    {n:5,pos:'DF',name:'Jonathan Mensah'},
+    {n:3,pos:'DF',name:'Gideon Mensah'},
+    {n:4,pos:'DF',name:'Alexander Djiku'},
+    {n:8,pos:'MF',name:'Thomas Partey'},
+    {n:6,pos:'MF',name:'Daniel-Kofi Kyereh'},
+    {n:7,pos:'MF',name:'Jordan Ayew'},
+    {n:10,pos:'MF',name:'André Ayew'},
+    {n:9,pos:'FW',name:'Inaki Williams'},
+    {n:11,pos:'FW',name:'Osman Bukari'},
+    {n:17,pos:'FW',name:'Mohammed Kudus'},
+  ],
+  '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra': [
+    {n:1,pos:'GK',name:'Jordan Pickford'},
+    {n:13,pos:'GK',name:'Nick Pope'},
+    {n:2,pos:'DF',name:'Trent Alexander-Arnold'},
+    {n:5,pos:'DF',name:'John Stones'},
+    {n:3,pos:'DF',name:'Luke Shaw'},
+    {n:4,pos:'DF',name:'Marc Guehi'},
+    {n:6,pos:'DF',name:'Harry Maguire'},
+    {n:8,pos:'MF',name:'Declan Rice'},
+    {n:7,pos:'MF',name:'Jack Grealish'},
+    {n:14,pos:'MF',name:'Kieran Trippier'},
+    {n:15,pos:'MF',name:'Phil Foden'},
+    {n:10,pos:'FW',name:'Jude Bellingham'},
+    {n:9,pos:'FW',name:'Harry Kane'},
+    {n:11,pos:'FW',name:'Bukayo Saka'},
+    {n:17,pos:'FW',name:'Rashford'},
+    {n:20,pos:'FW',name:'Ollie Watkins'},
+  ],
+};
+
+
 // ── BRACKET OFICIAL R32 (fuente: FIFA / worldcuppass.com) ─────────
 // Formato: {id, h: "descripcion home", a: "descripcion away", date, venue, matchId en DB}
+// Bracket oficial FIFA World Cup 2026 — R32
+// Fuente: worldcuppass.com / FIFA official
 const R32_DEFS=[
-  {num:'73',h:'2A',a:'2B',date:'28 Jun',venue:'SoFi, LA'},
-  {num:'74',h:'1E',a:'3A/B/C/D/F',date:'29 Jun',venue:'Gillette, Boston'},
-  {num:'75',h:'1F',a:'2C',date:'29 Jun',venue:'BBVA, Monterrey'},
-  {num:'76',h:'1C',a:'2F',date:'29 Jun',venue:'NRG, Houston'},
-  {num:'77',h:'1I',a:'3C/D/F/G/H',date:'30 Jun',venue:'MetLife, NJ'},
-  {num:'78',h:'2E',a:'2I',date:'30 Jun',venue:'AT&T, Dallas'},
-  {num:'79',h:'1A',a:'3C/E/F/H/I',date:'30 Jun',venue:'Azteca, CDMX'},
-  {num:'80',h:'1L',a:'3E/H/I/J/K',date:'1 Jul',venue:'MB, Atlanta'},
-  {num:'81',h:'1D',a:'3B/E/F/I/J',date:'1 Jul',venue:"Levi's, SF"},
-  {num:'82',h:'1G',a:'3A/E/H/I/J',date:'1 Jul',venue:'Lumen, Seattle'},
-  {num:'83',h:'2K',a:'2L',date:'2 Jul',venue:'BMO, Toronto'},
-  {num:'84',h:'1H',a:'2J',date:'2 Jul',venue:'SoFi, LA'},
-  {num:'85',h:'1B',a:'3E/F/G/I/J',date:'2 Jul',venue:'BC Place, Vancouver'},
-  {num:'86',h:'1J',a:'2H',date:'3 Jul',venue:'Hard Rock, Miami'},
-  {num:'87',h:'1K',a:'3D/E/I/J/L',date:'3 Jul',venue:'Arrowhead, KC'},
-  {num:'88',h:'2D',a:'2G',date:'3 Jul',venue:'AT&T, Dallas'},
+  {num:'73',h:'2A',a:'2B',date:'Dom 28 Jun',venue:'SoFi, Inglewood'},
+  {num:'74',h:'1E',a:'3er A/B/C/D/F',date:'Lun 29 Jun',venue:'Gillette, Foxborough'},
+  {num:'75',h:'1F',a:'2C',date:'Lun 29 Jun',venue:'BBVA, Monterrey'},
+  {num:'76',h:'1C',a:'2F',date:'Lun 29 Jun',venue:'NRG, Houston'},
+  {num:'77',h:'1I',a:'3er C/D/F/G/H',date:'Mar 30 Jun',venue:'MetLife, NJ'},
+  {num:'78',h:'2E',a:'2I',date:'Mar 30 Jun',venue:'AT&T, Dallas'},
+  {num:'79',h:'1A',a:'3er C/E/F/H/I',date:'Mar 30 Jun',venue:'Azteca, CDMX'},
+  {num:'80',h:'1L',a:'3er E/H/I/J/K',date:'Mié 1 Jul',venue:'MB, Atlanta'},
+  {num:'81',h:'1D',a:'3er B/E/F/I/J',date:'Mié 1 Jul',venue:"Levi's, SF"},
+  {num:'82',h:'1G',a:'3er A/E/H/I/J',date:'Mié 1 Jul',venue:'Lumen, Seattle'},
+  {num:'83',h:'2K',a:'2L',date:'Jue 2 Jul',venue:'BMO, Toronto'},
+  {num:'84',h:'1H',a:'2J',date:'Jue 2 Jul',venue:'SoFi, Inglewood'},
+  {num:'85',h:'1B',a:'3er E/F/G/I/J',date:'Jue 2 Jul',venue:'BC Place, Vancouver'},
+  {num:'86',h:'1J',a:'2H',date:'Vie 3 Jul',venue:'Hard Rock, Miami'},
+  {num:'87',h:'1K',a:'3er D/E/I/J/L',date:'Vie 3 Jul',venue:'Arrowhead, KC'},
+  {num:'88',h:'2D',a:'2G',date:'Vie 3 Jul',venue:'AT&T, Dallas'},
 ];
 
 let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null};
@@ -821,15 +1602,86 @@ function renderBracketKO(){
 }
 
 // FANTASY
-function renderFantasyForm(){const f=S.fantasy,locked=f?.locked,unl=f?.unlocked_by_admin;const area=document.getElementById('fantasyForm');if(!area)return;if(locked&&!unl){area.innerHTML=`<div class="pf"><label>🌍 Tu equipo</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.team||'—'}</span></div><div class="pf"><label>⭐ Tu jugador</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.player||'—'}</span></div><div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee</div>`;}else{const opts=TEAMS.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');area.innerHTML=`<div class="pf"><label>🌍 Tu equipo</label><select id="fTeam"><option value="">— Elige —</option>${opts}</select></div><div class="pf"><label>⭐ Tu jugador</label><input id="fPlayer" type="text" placeholder="Nombre del jugador..." value="${f?.player||''}"></div>${unl?'<div class="unlockb">🔓 Desbloqueado por admin</div>':''}<button class="btn g" onclick="saveFantasy()" style="margin-top:9px">${locked&&unl?'🔓 Guardar nueva elección':'🔒 Guardar y bloquear'}</button>${!locked?'<p style="font-size:10px;color:var(--mut);margin-top:5px">⚠️ Una vez guardado no podrás cambiarlo sin el admin</p>':''}`;} renderFantasyRanking();}
-async function saveFantasy(){const team=document.getElementById('fTeam')?.value,player=document.getElementById('fPlayer')?.value.trim();if(!team||!player){toast('Elige equipo y escribe el jugador','err');return;}const{error}=await sb.from('fantasy').upsert({user_id:S.userId,group_id:S.groupId,team,player,locked:true,unlocked_by_admin:false,player_goals:S.fantasy?.player_goals||0,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});if(error){toast('Error: '+error.message,'err');return;}await loadFantasy();await loadAllFantasy();toast('✓ Bloqueado: '+team+' · '+player+' 🔒');renderFantasyForm();}
+function renderFantasyForm(){
+  const f=S.fantasy,locked=f?.locked,unl=f?.unlocked_by_admin;
+  const area=document.getElementById('fantasyForm');if(!area)return;
+  if(locked&&!unl){
+    area.innerHTML=`<div class="pf"><label>🌍 Tu equipo</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.team||'—'}</span></div>
+    <div class="pf"><label>⭐ Tu jugador</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.player_number?'#'+f.player_number+' ':''} ${f.player||'—'}</span></div>
+    <div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee</div>`;
+  }else{
+    const teamOpts=TEAMS.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');
+    const squad=f?.team?SQUADS[f.team]||[]:[];
+    const pos_order={'GK':0,'DF':1,'MF':2,'FW':3};
+    const sortedSquad=[...squad].sort((a,b)=>(pos_order[a.pos]||0)-(pos_order[b.pos]||0)||a.n-b.n);
+    const posLabels={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
+    let playerOpts='<option value="">— Elige jugador —</option>';
+    let lastPos='';
+    sortedSquad.forEach(p=>{
+      if(p.pos!==lastPos){playerOpts+=`<optgroup label="${posLabels[p.pos]||p.pos}">`;lastPos=p.pos;}
+      const selected=f?.player===p.name?' selected':'';
+      playerOpts+=`<option value="${p.name}" data-num="${p.n}"${selected}>#${p.n} ${p.name}</option>`;
+    });
+    area.innerHTML=`
+    <div class="pf"><label>🌍 Tu equipo</label>
+      <select id="fTeam" onchange="onTeamChange(this.value)"><option value="">— Elige —</option>${teamOpts}</select>
+    </div>
+    ${f?.team?`<div class="pf"><label>⭐ Tu jugador</label>
+      <select id="fPlayer"><option value="">— Elige jugador —</option>${playerOpts}</select>
+    </div>`:'<div class="pf" style="color:var(--mut);font-size:12px">← Elige primero el equipo para ver los jugadores</div>'}
+    ${unl?'<div class="unlockb">🔓 Desbloqueado por admin</div>':''}
+    <button class="btn g" onclick="saveFantasy()" style="margin-top:9px">${locked&&unl?'🔓 Guardar nueva elección':'🔒 Guardar y bloquear'}</button>
+    ${!locked?'<p style="font-size:10px;color:var(--mut);margin-top:5px">⚠️ Una vez guardado no podrás cambiarlo sin el admin</p>':''}`;
+  }
+  renderFantasyRanking();
+}
+function onTeamChange(team){
+  // Re-render form with new team selected (updates player list)
+  if(S.fantasy)S.fantasy={...S.fantasy,team};
+  else S.fantasy={team,player:'',locked:false};
+  renderFantasyForm();
+}
+async function saveFantasy(){
+  const team=document.getElementById('fTeam')?.value;
+  const playerSel=document.getElementById('fPlayer');
+  const player=playerSel?.value.trim();
+  if(!team||!player){toast('Elige equipo y jugador','err');return;}
+  const playerNum=parseInt(playerSel?.selectedOptions?.[0]?.dataset?.num)||0;
+  const{error}=await sb.from('fantasy').upsert({user_id:S.userId,group_id:S.groupId,team,player,player_number:playerNum,locked:true,unlocked_by_admin:false,player_goals:S.fantasy?.player_goals||0,player_assists:S.fantasy?.player_assists||0,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
+  if(error){toast('Error: '+error.message,'err');return;}
+  await loadFantasy();await loadAllFantasy();
+  toast('✓ Bloqueado: #'+playerNum+' '+player+' ('+team+') 🔒');renderFantasyForm();
+}
 function renderFantasyRanking(){const el=document.getElementById('fantasyRank');if(!el)return;const s=S.allUsers.map(u=>{const f=S.allFantasy.find(x=>x.user_id===u.id);return{name:u.username,pts:calcFPts(u.id),team:f?.team||'—',player:f?.player||'—',locked:f?.locked};}).sort((a,b)=>b.pts-a.pts);if(!s.length){el.innerHTML='<div class="empty"><div class="ic">⚽</div><p>Nadie ha elegido equipo aún</p></div>';return;}el.innerHTML=s.map((u,i)=>`<div class="rc"><div class="rp ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i+1}</div><div><div class="rn">${u.name}</div><div class="rs">${u.team} · ${u.player} ${u.locked?'🔒':''}</div></div><div class="rpts">${u.pts}<span style="font-size:10px;color:var(--mut)"> pts</span></div></div>`).join('');}
 
 // POINTS
 function calcM(pred,res){if(res.home===null||res.home===undefined)return 0;const ph=parseInt(pred.home),pa=parseInt(pred.away),rh=parseInt(res.home),ra=parseInt(res.away);if(isNaN(ph)||isNaN(pa))return 0;if(ph===rh&&pa===ra)return 3;const pw=ph>pa?'H':ph<pa?'A':'D',rw=rh>ra?'H':rh<ra?'A':'D';return pw===rw?1:0;}
 function norm(s){return(s||'').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]\s*/gu,'').toLowerCase().replace(/[^a-z]/g,'');}
 function calcQPts(uid){let pts=0;const up=S._allPreds?.[uid]||(uid===S.userId?S.preds:{});S.matches.forEach(m=>{if(m.status!=='FINISHED')return;pts+=calcM(up[m.id]||{},{home:m.home_score,away:m.away_score});});const fp=S.allFinalPreds.find(f=>f.user_id===uid)||{},tr=S.tr||{};if(tr.champion&&norm(fp.champion)===norm(tr.champion))pts+=10;if(tr.runner_up&&norm(fp.runner_up)===norm(tr.runner_up))pts+=6;if(tr.top_scorer&&norm(fp.top_scorer)===norm(tr.top_scorer))pts+=8;if(tr.mvp&&norm(fp.mvp)===norm(tr.mvp))pts+=5;return pts;}
-function calcFPts(uid){const f=S.allFantasy.find(x=>x.user_id===uid);if(!f?.team)return 0;let pts=0;const tr=S.tr||{};const qts=(tr.quarter_teams||[]).map(s=>norm(s)),smis=(tr.semi_teams||[]).map(s=>norm(s));S.matches.forEach(m=>{if(m.status!=='FINISHED')return;const isH=norm(m.home)===norm(f.team),isA=norm(m.away)===norm(f.team);if(!isH&&!isA)return;const rh=parseInt(m.home_score),ra=parseInt(m.away_score);if(isNaN(rh)||isNaN(ra))return;if(rh===ra)pts+=1;else if((isH&&rh>ra)||(isA&&ra>rh))pts+=3;});if(qts.includes(norm(f.team)))pts+=6;if(smis.includes(norm(f.team)))pts+=10;if(tr.champion&&norm(tr.champion)===norm(f.team))pts+=20;pts+=(f.player_goals||0)*5;if(tr.top_scorer&&norm(tr.top_scorer)===norm(f.player))pts+=15;return pts;}
+function calcFPts(uid){
+  const f=S.allFantasy.find(x=>x.user_id===uid);if(!f?.team)return 0;
+  let pts=0;const tr=S.tr||{};
+  const qts=(tr.quarter_teams||[]).map(s=>norm(s)),smis=(tr.semi_teams||[]).map(s=>norm(s));
+  S.matches.forEach(m=>{
+    if(m.status!=='FINISHED')return;
+    const isH=norm(m.home)===norm(f.team),isA=norm(m.away)===norm(f.team);
+    if(!isH&&!isA)return;
+    const rh=parseInt(m.home_score),ra=parseInt(m.away_score);if(isNaN(rh)||isNaN(ra))return;
+    // +1 por ganar el partido (nuevo)
+    if((isH&&rh>ra)||(isA&&ra>rh))pts+=1;
+    // (empate no da pts por "ganar partido", solo los de fase)
+    if(rh===ra)pts+=0; // empate no da 1pt por partido aquí (eso es fase de grupos abajo)
+  });
+  // Pts por clasificación fase (ya incluyen win/draw de grupo)
+  if(qts.includes(norm(f.team)))pts+=6;
+  if(smis.includes(norm(f.team)))pts+=10;
+  if(tr.champion&&norm(tr.champion)===norm(f.team))pts+=20;
+  // Jugador
+  pts+=(f.player_goals||0)*5;
+  pts+=(f.player_assists||0)*3;
+  if(tr.top_scorer&&norm(tr.top_scorer)===norm(f.player))pts+=15;
+  return pts;
+}
 
 // NAV
 function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();}
@@ -861,8 +1713,43 @@ async function saveRes(mid){const h=parseInt(document.getElementById('rh-'+mid)?
 async function unsetRes(mid){await sb.from('matches').update({home_score:null,away_score:null,status:'SCHEDULED',updated_at:new Date().toISOString()}).eq('id',mid);await loadMatches();renderAdminMatches();renderAll();toast('Resultado eliminado','info');}
 async function saveTR(){const{error}=await sb.from('tournament_results').upsert({group_id:S.groupId,champion:document.getElementById('tr-champ').value.trim(),runner_up:document.getElementById('tr-runner').value.trim(),top_scorer:document.getElementById('tr-scorer').value.trim(),mvp:document.getElementById('tr-mvp').value.trim(),quarter_teams:document.getElementById('tr-quarters').value?document.getElementById('tr-quarters').value.split(',').map(s=>s.trim()):[],semi_teams:document.getElementById('tr-semis').value?document.getElementById('tr-semis').value.split(',').map(s=>s.trim()):[],updated_at:new Date().toISOString()},{onConflict:'group_id'});if(error){toast('Error','err');return;}await loadTR();S._allPreds=null;renderRk(S.rkMode);renderFantasyRanking();toast('¡Datos del torneo guardados! 🏆');}
 function loadTRForm(){const tr=S.tr||{};const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('tr-champ',tr.champion);s('tr-runner',tr.runner_up);s('tr-scorer',tr.top_scorer);s('tr-mvp',tr.mvp);s('tr-quarters',(tr.quarter_teams||[]).join(','));s('tr-semis',(tr.semi_teams||[]).join(','));}
-function renderAdminGoals(){const el=document.getElementById('adminGoals');if(!el)return;const us=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.player);if(!us.length){el.innerHTML='<p style="color:var(--mut);font-size:11px">Nadie tiene jugador elegido.</p>';return;}el.innerHTML=us.map(u=>{const f=S.allFantasy.find(x=>x.user_id===u.id),g=f?.player_goals||0;return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap"><span style="min-width:90px;font-size:11px">${u.username} · <span style="color:var(--acc)">${f.player}</span></span><div style="display:flex;align-items:center;gap:5px"><button onclick="chgGoal('${u.id}',-1)" style="width:24px;height:24px;border:1px solid var(--bor);border-radius:5px;background:var(--bg);color:var(--txt);font-size:14px;cursor:pointer">−</button><span style="font-family:'Bebas Neue';font-size:18px;color:var(--gold);min-width:18px;text-align:center">${g}</span><button onclick="chgGoal('${u.id}',1)" style="width:24px;height:24px;border:none;border-radius:5px;background:var(--green);color:#fff;font-size:14px;cursor:pointer;font-weight:700">+</button></div><span style="font-size:10px;color:var(--mut)">= +${g*5} pts</span></div>`;}).join('');}
-async function chgGoal(uid,d){const f=S.allFantasy.find(x=>x.user_id===uid);const ng=Math.max(0,(f?.player_goals||0)+d);await sb.from('fantasy').update({player_goals:ng}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFantasy();renderAdminGoals();renderFantasyRanking();renderRk(S.rkMode);}
+function renderAdminGoals(){
+  const el=document.getElementById('adminGoals');if(!el)return;
+  const us=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.player);
+  if(!us.length){el.innerHTML='<p style="color:var(--mut);font-size:11px">Nadie tiene jugador elegido.</p>';return;}
+  el.innerHTML=us.map(u=>{
+    const f=S.allFantasy.find(x=>x.user_id===u.id),g=f?.player_goals||0,a=f?.player_assists||0;
+    const num=f.player_number?'#'+f.player_number+' ':'';
+    return`<div style="background:var(--bg);border-radius:8px;padding:9px;margin-bottom:7px">
+      <div style="font-size:11px;font-weight:600;margin-bottom:7px">${u.username} · <span style="color:var(--acc)">${num}${f.player}</span> <span style="font-size:10px;color:var(--mut)">(${f.team})</span></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--mut)">⚽ Goles:</span>
+          <button onclick="chgGoal('${u.id}','goals',-1)" style="width:22px;height:22px;border:1px solid var(--bor);border-radius:5px;background:var(--bg);color:var(--txt);font-size:13px;cursor:pointer">−</button>
+          <span style="font-family:'Bebas Neue';font-size:18px;color:var(--gold);min-width:16px;text-align:center">${g}</span>
+          <button onclick="chgGoal('${u.id}','goals',1)" style="width:22px;height:22px;border:none;border-radius:5px;background:var(--green);color:#fff;font-size:13px;cursor:pointer;font-weight:700">+</button>
+          <span style="font-size:10px;color:var(--mut)">+${g*5}pts</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--mut)">🅰️ Asist:</span>
+          <button onclick="chgGoal('${u.id}','assists',-1)" style="width:22px;height:22px;border:1px solid var(--bor);border-radius:5px;background:var(--bg);color:var(--txt);font-size:13px;cursor:pointer">−</button>
+          <span style="font-family:'Bebas Neue';font-size:18px;color:var(--blue);min-width:16px;text-align:center">${a}</span>
+          <button onclick="chgGoal('${u.id}','assists',1)" style="width:22px;height:22px;border:none;border-radius:5px;background:var(--blue);color:#fff;font-size:13px;cursor:pointer;font-weight:700">+</button>
+          <span style="font-size:10px;color:var(--mut)">+${a*3}pts</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function chgGoal(uid,type,d){
+  const f=S.allFantasy.find(x=>x.user_id===uid);
+  const update={};
+  if(type==='goals') update.player_goals=Math.max(0,(f?.player_goals||0)+d);
+  else update.player_assists=Math.max(0,(f?.player_assists||0)+d);
+  await sb.from('fantasy').update(update).eq('user_id',uid).eq('group_id',S.groupId);
+  await loadAllFantasy();renderAdminGoals();renderFantasyRanking();renderRk(S.rkMode);
+}
+
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
 function setSS(t,msg){document.getElementById('sdot').className='sdot '+(t==='ok'?'ok':t==='err'?'err':'sync');document.getElementById('sstatus').textContent=msg;}
@@ -878,12 +1765,71 @@ if(loadSess()){initApp();}else{showScreen('auth');}
 </script>
 
 <script>
-if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='RELOAD')window.location.reload();});}
+if('serviceWorker'in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='RELOAD')window.location.reload();});
+}
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('installDismissed'))setTimeout(()=>document.getElementById('installBanner')?.classList.add('show'),4000);});
-window.addEventListener('appinstalled',()=>{document.getElementById('installBanner')?.classList.remove('show');deferredPrompt=null;toast('✅ App instalada');});
-function installPWA(){if(!deferredPrompt){toast('En Safari: Compartir → Añadir a pantalla de inicio 📲','info');return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('installBanner')?.classList.remove('show');});}
-function dismissInstall(){document.getElementById('installBanner')?.classList.remove('show');localStorage.setItem('installDismissed','1');}
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone;
+const isAndroid=/android/i.test(navigator.userAgent);
+const isInstalled=window.navigator.standalone||window.matchMedia('(display-mode:standalone)').matches;
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  if(!localStorage.getItem('installDismissed')){
+    setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},3000);
+  }
+});
+window.addEventListener('appinstalled',()=>{
+  const b=document.getElementById('installBanner');if(b)b.classList.remove('show');
+  deferredPrompt=null;toast('✅ App instalada en tu pantalla de inicio');
+});
+
+function installPWA(){
+  if(isInstalled){toast('✅ La app ya está instalada','info');return;}
+  if(isIOS){
+    // iOS: show instructions modal
+    showIOSInstall();return;
+  }
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('installBanner')?.classList.remove('show');});
+  }else{
+    // Fallback for browsers that don't support prompt
+    toast('Abre el menú del navegador → "Instalar app" o "Añadir a pantalla de inicio" 📲','info');
+  }
+}
+function showIOSInstall(){
+  const el=document.getElementById('iosModal');if(el)el.classList.add('show');
+}
+function hideIOSInstall(){
+  const el=document.getElementById('iosModal');if(el)el.classList.remove('show');
+}
+function dismissInstall(){
+  document.getElementById('installBanner')?.classList.remove('show');
+  localStorage.setItem('installDismissed','1');
+}
+// Show iOS banner automatically if on iOS Safari and not installed
+if(isIOS&&!isInstalled&&!localStorage.getItem('installDismissed')){
+  setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},3000);
+}
 </script>
+
+<!-- iOS INSTALL MODAL -->
+<div class="mo" id="iosModal">
+  <div class="md" style="max-width:340px">
+    <h3>📲 Instalar en iPhone</h3>
+    <p>Para instalar la app en iOS, sigue estos pasos:</p>
+    <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:12px;color:var(--txt);line-height:1.8">
+      <div style="margin-bottom:6px">1️⃣ Pulsa el botón <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:16px">⬆️</span> en la barra inferior de Safari</div>
+      <div style="margin-bottom:6px">2️⃣ Desplázate hacia abajo y pulsa <strong style="color:var(--gold)">Añadir a pantalla de inicio</strong></div>
+      <div>3️⃣ Pulsa <strong style="color:var(--gold)">Añadir</strong> — ¡y listo! 🎉</div>
+    </div>
+    <div style="margin-top:12px;text-align:center">
+      <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'><rect width='200' height='60' rx='8' fill='%231a1a26'/><text x='100' y='25' text-anchor='middle' fill='%236b6b88' font-size='10' font-family='sans-serif'>Safari → Compartir ⬆️ → Añadir a pantalla de inicio</text><text x='100' y='45' text-anchor='middle' fill='%23f5c842' font-size='11' font-family='sans-serif' font-weight='bold'>[ + Añadir a pantalla de inicio ]</text></svg>" style="width:100%;border-radius:6px;margin-bottom:10px">
+    </div>
+    <button class="btn g" style="width:100%" onclick="hideIOSInstall();localStorage.setItem('installDismissed','1')">Entendido ✓</button>
+  </div>
+</div>
 </body>
 </html>
