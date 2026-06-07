@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f5c842">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mundial 2026">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- PWA install banner -->
 <title>Mundial 2026 — Apuestas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -16,6 +23,15 @@ header{padding:24px 0 12px;text-align:center;border-bottom:1px solid var(--bor);
 .tr{font-size:40px;filter:drop-shadow(0 0 18px rgba(245,200,66,.6));margin-bottom:4px}
 header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(34px,9vw,70px);letter-spacing:4px;line-height:1;background:linear-gradient(135deg,#f5c842,#e8a000,#fff8e0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 header p{color:var(--mut);font-size:11px;margin-top:4px;letter-spacing:2px;text-transform:uppercase}
+
+
+/* PWA INSTALL BANNER */
+.install-banner{display:none;background:linear-gradient(135deg,var(--acc),#5a3fa0);border:1px solid rgba(124,92,191,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px;align-items:center;gap:10px;flex-wrap:wrap}
+.install-banner.show{display:flex}
+.install-banner .ib-txt{flex:1;font-size:12px;color:#fff}
+.install-banner .ib-txt strong{display:block;font-size:13px;margin-bottom:2px}
+.install-banner button{background:var(--gold);border:none;border-radius:7px;padding:7px 14px;font-family:'Outfit',sans-serif;font-weight:700;font-size:12px;cursor:pointer;color:#000;white-space:nowrap}
+.install-banner .ib-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
 
 /* SCREENS */
 .screen{display:none;animation:fi .25s ease}.screen.active{display:block}
@@ -194,6 +210,17 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button class="sbtn" onclick="switchGroup()">↩ Salir</button>
   </div>
 
+
+  <!-- PWA INSTALL BANNER -->
+  <div class="install-banner" id="installBanner">
+    <div class="ib-txt">
+      <strong>📲 Instalar app</strong>
+      Añade Mundial 2026 a tu pantalla de inicio
+    </div>
+    <button onclick="installPWA()">Instalar</button>
+    <button class="ib-close" onclick="dismissInstall()">✕</button>
+  </div>
+
   <nav class="nav">
     <button class="active" onclick="showPanel('quiniela',this)">🎯 Quiniela</button>
     <button onclick="showPanel('fantasy',this)">⚽ Fantasy</button>
@@ -308,8 +335,8 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
 
 <script>
 // ══ CONFIG — Rellenar con los valores de tu proyecto Supabase ══════
-const SUPABASE_URL = 'TU_SUPABASE_URL';       // https://xxxx.supabase.co
-const SUPABASE_ANON = 'TU_SUPABASE_ANON_KEY'; // clave pública (anon)
+const SUPABASE_URL = 'https://jygbsfbnkqtugmgyjgpw.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5Z2JzZmJua3F0dWdtZ3lqZ3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzA3OTQsImV4cCI6MjA5NjM0Njc5NH0.fN7bLgzzQdR_XF3I-4aKPp1xXkWzytqfLMlfmxIKqeA';
 // ══════════════════════════════════════════════════════════════════
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -631,5 +658,85 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 // ── BOOT ──────────────────────────────────────────────────────────
 if(loadSess()){initApp();}else{showScreen('auth');}
 </script>
+
+<script>
+// ── PWA: Service Worker ────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Check for updates every time app opens
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version available — show update toast
+            showUpdateToast();
+          }
+        });
+      });
+    }).catch(err => console.log('SW error:', err));
+  });
+
+  // Reload when new SW takes control
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+
+// ── PWA: Install prompt ───────────────────────────────────────────
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show banner after 3s if not dismissed before
+  if (!localStorage.getItem('installDismissed')) {
+    setTimeout(() => {
+      document.getElementById('installBanner')?.classList.add('show');
+    }, 3000);
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner')?.classList.remove('show');
+  deferredPrompt = null;
+  toast('✅ App instalada en tu pantalla de inicio');
+});
+
+function installPWA() {
+  if (!deferredPrompt) {
+    // iOS fallback
+    toast('En Safari: pulsa "Compartir" → "Añadir a pantalla de inicio" 📲', 'info');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(choice => {
+    deferredPrompt = null;
+    document.getElementById('installBanner')?.classList.remove('show');
+  });
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner')?.classList.remove('show');
+  localStorage.setItem('installDismissed', '1');
+}
+
+// ── Update toast ──────────────────────────────────────────────────
+function showUpdateToast() {
+  const t = document.getElementById('toast');
+  t.innerHTML = '🆕 Nueva versión disponible <button onclick="applyUpdate()" style="margin-left:8px;background:#fff;color:#000;border:none;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer">Actualizar</button>';
+  t.style.background = 'var(--acc)';
+  t.style.transform = 'none';
+  t.style.opacity = '1';
+  t.style.maxWidth = '280px';
+  // Don't auto-hide this one
+}
+function applyUpdate() {
+  navigator.serviceWorker.getRegistration().then(reg => {
+    reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+  });
+}
+</script>
+
 </body>
 </html>
