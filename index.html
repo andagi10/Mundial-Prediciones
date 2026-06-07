@@ -303,10 +303,11 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button class="debug-toggle" onclick="toggleDebug()">Ocultar</button>
   </div>
 
+  <!-- INSTALL BANNER (aparece automáticamente) -->
   <div class="install-banner" id="installBanner">
     <div class="ib-txt">
-      <strong>📲 Instalar en tu móvil</strong>
-      <span id="installBannerSub">Añade Mundial 2026 a tu pantalla de inicio para usarla como app</span>
+      <strong>📲 Instalar app</strong>
+      <span id="installBannerSub">Guárdala en tu pantalla de inicio</span>
     </div>
     <button onclick="installPWA()">📥 Instalar</button>
     <button class="ib-close" onclick="dismissInstall()">✕</button>
@@ -320,6 +321,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button onclick="showPanel('stats',this)">📊 Stats</button>
     <button onclick="showPanel('ranking',this)">🏅 Ranking</button>
     <button onclick="showPanel('admin',this)">🔧 Admin</button>
+    <button onclick="showInstallModal()" style="background:rgba(124,92,191,.25);color:var(--acc);border:1px solid rgba(124,92,191,.4)" id="installNavBtn">📲</button>
   </nav>
 
   <!-- EN VIVO -->
@@ -412,7 +414,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   <div class="panel" id="panel-stats">
     <div class="stitle">📊 Estadísticas de Jugadores</div>
     <div style="background:var(--card);border:1px solid var(--bor);border-radius:9px;padding:10px 13px;margin-bottom:10px;font-size:11px;color:var(--mut)">
-      ℹ️ Las estadísticas (goles y asistencias) las actualiza el <strong style="color:var(--txt)">admin</strong> manualmente desde el panel Admin → "Goles Fantasy". Así se actualizan los puntos del Fantasy en tiempo real.
+      ℹ️ El admin registra goles y asistencias en Admin → "Goles Fantasy". Esta pantalla se <strong style="color:var(--green)">actualiza automáticamente en tiempo real</strong> cuando el admin hace cambios — no hace falta recargar.
     </div>
     <div class="itabs" id="stats-tabs">
       <button class="it active" onclick="showStats('goals',this)">⚽ Goles</button>
@@ -1483,12 +1485,15 @@ async function doLiveFetch(){
   fetchCount++;
   lastFetchTime=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   setSS('sync','↻ Actualizando...');
-  await loadMatches();
-  renderLive();renderMatches();renderBracket();
+  // Recargar partidos Y fantasy para stats actualizadas
+  await Promise.all([loadMatches(),loadAllFantasy()]);
+  renderLive();renderMatches();renderBracket();renderFantasyRanking();
+  // Si el panel de stats está activo, refrescarlo también
+  if(document.getElementById('panel-stats')?.classList.contains('active'))renderStats();
   const live=S.matches.filter(m=>m.status==='IN_PLAY');
   setSS('ok','Act. '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}));
   updateDebug();
-  dbLog(`Fetch #${fetchCount} OK — ${live.length} partidos vivos`);
+  dbLog(`Fetch #${fetchCount} OK — ${live.length} vivos`);
 }
 function updateTimerUI(){
   const prog=document.getElementById('timerProg');
@@ -1531,7 +1536,14 @@ function startRT(){
       setSS('sync','⚡ Cambio detectado...');await loadMatches();renderAll();renderRk(S.rkMode);renderFantasyRanking();
       setSS('ok','⚡ Actualizado en tiempo real');liveSecs=REFRESH_SECS;updateTimerUI();dbLog('Realtime update recibido');
     })
-    .on('postgres_changes',{event:'*',schema:'public',table:'fantasy',filter:'group_id=eq.'+S.groupId},async()=>{await loadFantasy();await loadAllFantasy();renderFantasyForm();renderFantasyRanking();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'fantasy',filter:'group_id=eq.'+S.groupId},async()=>{
+      setSS('sync','⚡ Fantasy actualizado...');
+      await loadFantasy();await loadAllFantasy();
+      renderFantasyForm();renderFantasyRanking();renderRk(S.rkMode);
+      if(document.getElementById('panel-stats').classList.contains('active'))renderStats();
+      setSS('ok','⚡ Estadísticas actualizadas');
+      dbLog('Realtime fantasy update recibido — stats recargadas');
+    })
     .subscribe();
 }
 function stopRT(){if(rtCh){rtCh.unsubscribe();rtCh=null;}}
@@ -1716,7 +1728,16 @@ function renderBracketKO(){
 
   function getPhaseMatches(ph){
     const ms=S.matches.filter(m=>m.phase===ph);
-    if(ph==='R32'&&!ms.length) return R32_DEFS.map(r=>({id:'r'+r.num,home:r.h,away:r.a,status:'SCHEDULED',home_score:null,away_score:null,match_date:null,stadium:r.venue,_label:r.num,_date:r.date}));
+    if(ph==='R32'){
+      // SIEMPRE usar R32_DEFS para emparejamientos correctos — BD puede tener datos viejos
+      return R32_DEFS.map(r=>{
+        const dbM=ms.find(m=>String(m.match_number)===String(r.num));
+        return{id:dbM?.id||('r'+r.num),home:r.h,away:r.a,
+          status:dbM?.status||'SCHEDULED',home_score:dbM?.home_score??null,
+          away_score:dbM?.away_score??null,match_date:dbM?.match_date||null,
+          stadium:r.venue,minute:dbM?.minute||null,_label:r.num,_date:r.date};
+      });
+    }
     return ms;
   }
 
@@ -2068,75 +2089,151 @@ self.addEventListener('fetch',e=>{
   });
 }
 let deferredPrompt=null;
-const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneIOS=window.navigator.standalone===true;
+const isInstalledPWA=window.navigator.standalone||window.matchMedia('(display-mode:standalone)').matches;
 const isAndroid=/android/i.test(navigator.userAgent);
-const isInstalled=window.navigator.standalone||window.matchMedia('(display-mode:standalone)').matches;
+const isSafariIOS=isIOS&&/safari/i.test(navigator.userAgent)&&!/chrome|crios|fxios/i.test(navigator.userAgent);
+const isChromeiOS=isIOS&&/crios/i.test(navigator.userAgent);
 
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();deferredPrompt=e;
-  if(!localStorage.getItem('installDismissed')){
-    setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},3000);
+  if(!localStorage.getItem('installDismissed')&&!isInstalledPWA){
+    setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},2000);
   }
+  // Ocultar botón de install de nav si Chrome Android lo soporta
+  const nb=document.getElementById('installNavBtn');if(nb)nb.style.display='';
 });
 window.addEventListener('appinstalled',()=>{
   const b=document.getElementById('installBanner');if(b)b.classList.remove('show');
-  deferredPrompt=null;toast('✅ App instalada en tu pantalla de inicio');
+  deferredPrompt=null;
+  const nb=document.getElementById('installNavBtn');if(nb)nb.style.display='none';
+  toast('✅ ¡App instalada! Ya puedes abrirla desde tu pantalla de inicio','info');
 });
 
-function installPWA(){
-  if(isInstalled){toast('✅ La app ya está instalada','info');return;}
-  if(isIOS){
-    // iOS: show instructions modal
-    showIOSInstall();return;
+// Siempre mostrar el botón de nav (excepto si ya instalada)
+if(isInstalledPWA){
+  const nb=document.getElementById('installNavBtn');if(nb)nb.style.display='none';
+}
+
+// iOS: mostrar banner automáticamente
+if(isIOS&&!isInstalledPWA&&!localStorage.getItem('installDismissed')){
+  setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},2000);
+}
+
+function showInstallModal(){
+  // Detectar la plataforma y mostrar instrucciones específicas
+  const modal=document.getElementById('installModal');if(!modal)return;
+  const body=document.getElementById('installModalBody');
+  
+  if(isInstalledPWA){
+    body.innerHTML=`<div style="text-align:center;padding:16px">
+      <div style="font-size:48px;margin-bottom:8px">✅</div>
+      <div style="font-weight:700;color:var(--green);font-size:15px">¡Ya está instalada!</div>
+      <div style="color:var(--mut);font-size:12px;margin-top:6px">La app ya está en tu pantalla de inicio</div>
+    </div>`;
+  } else if(isChromeiOS){
+    body.innerHTML=`<div>
+      <div style="background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px;font-size:12px;color:var(--txt);margin-bottom:12px">
+        ⚠️ Estás usando <strong>Chrome en iPhone</strong>. Para instalar la app tienes que abrirla en <strong style="color:var(--gold)">Safari</strong>.
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:12px">
+        <div style="margin-bottom:8px;display:flex;gap:8px;align-items:flex-start">
+          <span style="background:var(--acc);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">1</span>
+          <span>Copia esta URL: <strong style="color:var(--gold);word-break:break-all">${window.location.href}</strong></span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="background:var(--acc);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">2</span>
+          <span>Pégala en <strong>Safari</strong> y sigue los pasos de instalación</span>
+        </div>
+      </div>
+      <button class="btn g" style="width:100%;margin-top:10px" onclick="navigator.clipboard?.writeText(window.location.href).then(()=>toast('URL copiada — pégala en Safari 📋'))">📋 Copiar URL</button>
+    </div>`;
+  } else if(isIOS){
+    // Safari iOS
+    body.innerHTML=`<div>
+      <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--mut);margin-bottom:12px">
+        ✅ Estás en Safari — ¡puedes instalar la app ahora mismo!
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:12px">
+          <div style="background:var(--acc);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">1</div>
+          <div style="font-size:13px">Toca <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:18px">⬆️</span><br><span style="font-size:11px;color:var(--mut)">Botón central de la barra inferior</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:12px">
+          <div style="background:var(--acc);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">2</div>
+          <div style="font-size:13px">Desplázate y toca <strong style="color:var(--gold)">«Añadir a pantalla de inicio»</strong> <span style="font-size:16px">➕</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:12px">
+          <div style="background:var(--green);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">3</div>
+          <div style="font-size:13px">Toca <strong style="color:var(--gold)">«Añadir»</strong> — ¡Listo! 🎉<br><span style="font-size:11px;color:var(--mut)">La app aparecerá en tu inicio</span></div>
+        </div>
+      </div>
+    </div>`;
+  } else if(deferredPrompt){
+    // Android Chrome con prompt disponible — instalar directamente
+    document.getElementById('installModal').classList.remove('show');
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r=>{deferredPrompt=null;if(r.outcome==='accepted')toast('✅ ¡Instalando app!');});
+    return;
+  } else if(isAndroid){
+    // Android sin prompt (puede que ya esté instalada o sea Samsung browser etc)
+    body.innerHTML=`<div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:13px">
+          <div style="margin-bottom:10px;font-weight:600;color:var(--gold)">En Chrome para Android:</div>
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+            <span style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">1</span>
+            <span>Toca los <strong>3 puntos ⋮</strong> arriba a la derecha</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">2</span>
+            <span>Toca <strong style="color:var(--gold)">«Añadir a pantalla de inicio»</strong> o <strong style="color:var(--gold)">«Instalar app»</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  } else {
+    // Desktop
+    body.innerHTML=`<div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:13px">
+        <div style="margin-bottom:8px">En <strong>Chrome</strong> / <strong>Edge</strong>:</div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">1</span>
+          <span>Haz clic en el icono <strong style="color:var(--gold)">⊕</strong> en la barra de dirección, o en el menú → <strong style="color:var(--gold)">«Instalar app»</strong></span>
+        </div>
+      </div>
+    </div>`;
   }
-  if(deferredPrompt){
+  
+  modal.classList.add('show');
+}
+
+function installPWA(){
+  if(isInstalledPWA){toast('✅ La app ya está instalada','info');return;}
+  if(deferredPrompt&&!isIOS){
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('installBanner')?.classList.remove('show');});
   }else{
-    // Fallback for browsers that don't support prompt
-    toast('Abre el menú del navegador → "Instalar app" o "Añadir a pantalla de inicio" 📲','info');
+    showInstallModal();
   }
 }
-function showIOSInstall(){
-  const el=document.getElementById('iosModal');if(el)el.classList.add('show');
-}
-function hideIOSInstall(){
-  const el=document.getElementById('iosModal');if(el)el.classList.remove('show');
-}
+function hideInstallModal(){document.getElementById('installModal')?.classList.remove('show');}
+function showIOSInstall(){showInstallModal();}
+function hideIOSInstall(){hideInstallModal();}
 function dismissInstall(){
   document.getElementById('installBanner')?.classList.remove('show');
   localStorage.setItem('installDismissed','1');
 }
-// Show iOS banner automatically if on iOS Safari and not installed
-if(isIOS&&!isInstalled&&!localStorage.getItem('installDismissed')){
-  setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},3000);
-}
 </script>
 
-<!-- iOS INSTALL MODAL -->
-<div class="mo" id="iosModal">
-  <div class="md" style="max-width:360px">
-    <h3>📲 Instalar en iPhone / iPad</h3>
-    <p>Sigue estos pasos en Safari para instalar la app:</p>
-    <div style="background:var(--bg);border-radius:10px;padding:14px;font-size:12px;color:var(--txt);line-height:2">
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
-        <div style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:11px">1</div>
-        <div>Pulsa el icono <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:15px">⬆️</span> en la barra inferior de Safari</div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
-        <div style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:11px">2</div>
-        <div>Desplázate y toca <strong style="color:var(--gold)">«Añadir a pantalla de inicio»</strong> <span style="font-size:15px">➕</span></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:11px">3</div>
-        <div>Toca <strong style="color:var(--gold)">«Añadir»</strong> — ¡La app aparecerá en tu pantalla! 🎉</div>
-      </div>
-    </div>
-    <div style="margin-top:10px;padding:8px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:7px;font-size:11px;color:var(--mut)">
-      ⚠️ Esto solo funciona en <strong style="color:var(--txt)">Safari</strong>. Si usas Chrome en iPhone, ábrelo en Safari primero.
-    </div>
-    <button class="btn g" style="width:100%;margin-top:12px" onclick="hideIOSInstall();localStorage.setItem('installDismissed','1')">Entendido ✓</button>
+<!-- UNIVERSAL INSTALL MODAL -->
+<div class="mo" id="installModal">
+  <div class="md" style="max-width:380px">
+    <h3>📲 Instalar app Mundial 2026</h3>
+    <p>Añade la app a tu pantalla de inicio para acceder rápidamente</p>
+    <div id="installModalBody"><!-- filled by showInstallModal() --></div>
+    <button class="btn p" style="width:100%;margin-top:12px" onclick="hideInstallModal()">Cerrar</button>
   </div>
 </div>
-</body>
-</html>
+</body></html>
