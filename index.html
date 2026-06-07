@@ -3,24 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f5c842">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mundial 2026">
-<script>
-// Inline manifest para funcionar sin archivos externos
-(function(){
-  const m={name:"Mundial 2026 — Apuestas",short_name:"Mundial 26",description:"Quiniela del Mundial 2026 entre amigos",start_url:window.location.href.split('?')[0],display:"standalone",background_color:"#0a0a0f",theme_color:"#f5c842",orientation:"portrait-primary",icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230a0a0f'/><text x='96' y='130' text-anchor='middle' font-size='110'>🏆</text></svg>",sizes:"192x192",type:"image/svg+xml"},{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230a0a0f'/><text x='256' y='360' text-anchor='middle' font-size='320'>🏆</text></svg>",sizes:"512x512",type:"image/svg+xml"}]};
-  const blob=new Blob([JSON.stringify(m)],{type:'application/manifest+json'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('link');link.rel='manifest';link.href=url;
-  document.head.appendChild(link);
-  // Apple touch icon inline
-  const icon=document.createElement('link');icon.rel='apple-touch-icon';
-  icon.href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='30' fill='%230a0a0f'/><text x='90' y='125' text-anchor='middle' font-size='105'>🏆</text></svg>";
-  document.head.appendChild(icon);
-})();
-</script>
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Mundial 2026 — Apuestas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -37,6 +25,23 @@ header p{color:var(--mut);font-size:10px;margin-top:3px;letter-spacing:2px;text-
 
 .screen{display:none;animation:fi .25s ease}.screen.active{display:block}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+
+/* AUTH EMAIL OTP */
+#screen-auth{max-width:420px;margin:0 auto;padding-top:20px}
+#screen-dashboard{max-width:500px;margin:0 auto}
+
+/* DASHBOARD GROUP CARDS */
+.grp-card{background:var(--card);border:1px solid var(--bor);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px}
+.grp-card:hover{border-color:var(--acc);transform:translateY(-1px)}
+.grp-card .gc-icon{width:42px;height:42px;border-radius:10px;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.grp-card .gc-info{flex:1;min-width:0}
+.grp-card .gc-name{font-weight:700;font-size:13px;margin-bottom:2px}
+.grp-card .gc-meta{font-size:10px;color:var(--mut);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.grp-card .gc-code{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);letter-spacing:2px}
+.grp-card .gc-pts{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);text-align:right;flex-shrink:0}
+.grp-card .gc-rank{font-size:10px;color:var(--mut);text-align:right}
+.admin-badge{background:rgba(231,76,60,.15);color:var(--red);font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px}
 
 /* AUTH */
 .auth-card{background:var(--card);border:1px solid var(--bor);border-radius:16px;padding:24px;max-width:420px;margin:24px auto}
@@ -251,32 +256,82 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   <p>Apuestas entre amigos · USA · México · Canadá</p>
 </header>
 
+<!-- ── AUTH (Email OTP) ── -->
 <div class="screen active" id="screen-auth">
   <div class="auth-card">
-    <h2>¡Únete a la quiniela!</h2>
-    <div class="sub">Crea tu grupo o únete con el código de invitación</div>
-    <div class="atabs">
-      <div class="atab active" onclick="switchTab('join')">Unirme a un grupo</div>
-      <div class="atab" onclick="switchTab('create')">Crear grupo nuevo</div>
+    <div style="font-size:36px;text-align:center;margin-bottom:8px">🏆</div>
+    <h2 style="text-align:center">Mundial 2026</h2>
+    <div class="sub" style="text-align:center;margin-bottom:20px">Entra con tu email para unirte a la quiniela</div>
+    
+    <div id="auth-step-email">
+      <div class="aerr" id="err-email"></div>
+      <div class="field">
+        <label>Tu email</label>
+        <input id="auth-email" type="email" placeholder="tucorreo@gmail.com" autocomplete="email" inputmode="email">
+      </div>
+      <button class="btn g" style="width:100%;margin-top:4px" onclick="sendOTP()">Continuar →</button>
+      <p style="font-size:10px;color:var(--mut);text-align:center;margin-top:10px">Te enviaremos un código de verificación. Sin contraseña.</p>
     </div>
-    <div class="aform active" id="form-join">
-      <div class="aerr" id="err-join"></div>
-      <div class="field"><label>Código del grupo</label>
-        <input class="code" id="join-code" type="text" maxlength="6" placeholder="ABC123" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="field"><label>Tu nombre / apodo</label>
-        <input id="join-name" type="text" maxlength="20" placeholder="Ej: Ander"></div>
-      <button class="btn g" style="width:100%;margin-top:4px" onclick="joinGroup()">Unirme →</button>
+
+    <div id="auth-step-otp" style="display:none">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:28px;margin-bottom:4px">📬</div>
+        <div style="font-size:12px;color:var(--txt);font-weight:600">Código enviado a</div>
+        <div id="auth-email-shown" style="font-size:12px;color:var(--gold);margin-top:2px"></div>
+      </div>
+      <div class="aerr" id="err-otp"></div>
+      <div class="field">
+        <label>Código de 6 dígitos</label>
+        <input class="code" id="auth-otp" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
+      </div>
+      <button class="btn g" style="width:100%;margin-top:4px" onclick="verifyOTP()">Entrar →</button>
+      <button class="btn p" style="width:100%;margin-top:6px;font-size:11px" onclick="backToEmail()">← Cambiar email</button>
     </div>
-    <div class="aform" id="form-create">
-      <div class="aerr" id="err-create"></div>
-      <div class="field"><label>Nombre del grupo</label>
-        <input id="c-gname" type="text" maxlength="30" placeholder="Ej: La panda del curro"></div>
-      <div class="field"><label>Tu nombre (serás el admin)</label>
-        <input id="c-uname" type="text" maxlength="20" placeholder="Tu apodo..."></div>
-      <div class="field"><label>PIN de admin (mínimo 4 dígitos)</label>
-        <input id="c-pin" type="password" maxlength="8" placeholder="••••"></div>
-      <button class="btn g" style="width:100%;margin-top:4px" onclick="createGroup()">Crear grupo →</button>
+  </div>
+</div>
+
+<!-- ── DASHBOARD (tus grupos) ── -->
+<div class="screen" id="screen-dashboard">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:11px;color:var(--mut)">Sesión iniciada como</div>
+      <div id="dash-email" style="font-size:12px;color:var(--gold);font-weight:600"></div>
     </div>
+    <button class="sbtn" onclick="signOut()">Cerrar sesión</button>
+  </div>
+
+  <div class="stitle" style="font-size:18px">Tus grupos</div>
+  <div id="dash-groups"></div>
+
+  <!-- Crear / Unirse -->
+  <div style="display:flex;gap:6px;margin-top:16px;margin-bottom:10px">
+    <button class="it active" id="dash-tab-join" onclick="dashTab('join')">+ Unirme con código</button>
+    <button class="it" id="dash-tab-create" onclick="dashTab('create')">+ Crear nuevo grupo</button>
+  </div>
+
+  <div id="dash-form-join" style="background:var(--card);border:1px solid var(--bor);border-radius:11px;padding:13px;margin-bottom:10px">
+    <div class="aerr" id="err-join"></div>
+    <div class="field"><label>Código de invitación (6 letras)</label>
+      <input class="code" id="dash-join-code" type="text" maxlength="6" placeholder="ABC123" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="field"><label>Tu apodo en el grupo</label>
+      <input id="dash-join-name" type="text" maxlength="20" placeholder="Ej: Ander">
+    </div>
+    <button class="btn g" style="width:100%" onclick="joinGroup()">Unirme →</button>
+  </div>
+
+  <div id="dash-form-create" style="background:var(--card);border:1px solid var(--bor);border-radius:11px;padding:13px;display:none">
+    <div class="aerr" id="err-create"></div>
+    <div class="field"><label>Nombre del grupo</label>
+      <input id="dash-gname" type="text" maxlength="30" placeholder="Ej: La panda del curro">
+    </div>
+    <div class="field"><label>Tu apodo (serás el admin)</label>
+      <input id="dash-uname" type="text" maxlength="20" placeholder="Tu nombre...">
+    </div>
+    <div class="field"><label>PIN de admin (min. 4 dígitos)</label>
+      <input id="dash-pin" type="password" maxlength="8" placeholder="••••">
+    </div>
+    <button class="btn g" style="width:100%" onclick="createGroup()">Crear grupo →</button>
   </div>
 </div>
 
@@ -285,6 +340,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div class="sdot" id="sdot"></div>
     <span id="sstatus" style="font-size:11px;color:var(--mut)">Conectando...</span>
     <div class="sp"></div>
+    <span id="tournament-badge" style="font-size:10px;color:var(--mut)"></span>
     <span class="grp-badge" id="gname-badge"></span>
     <span class="grp-code" id="gcode-badge"></span>
     <button class="sbtn wa" onclick="openShare()">📲 Invitar</button>
@@ -303,13 +359,9 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button class="debug-toggle" onclick="toggleDebug()">Ocultar</button>
   </div>
 
-  <!-- INSTALL BANNER (aparece automáticamente) -->
   <div class="install-banner" id="installBanner">
-    <div class="ib-txt">
-      <strong>📲 Instalar app</strong>
-      <span id="installBannerSub">Guárdala en tu pantalla de inicio</span>
-    </div>
-    <button onclick="installPWA()">📥 Instalar</button>
+    <div class="ib-txt"><strong>📲 Instalar app</strong>Añade Mundial 2026 a tu pantalla de inicio</div>
+    <button onclick="installPWA()">Instalar</button>
     <button class="ib-close" onclick="dismissInstall()">✕</button>
   </div>
 
@@ -321,7 +373,6 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button onclick="showPanel('stats',this)">📊 Stats</button>
     <button onclick="showPanel('ranking',this)">🏅 Ranking</button>
     <button onclick="showPanel('admin',this)">🔧 Admin</button>
-    <button onclick="showInstallModal()" style="background:rgba(124,92,191,.25);color:var(--acc);border:1px solid rgba(124,92,191,.4)" id="installNavBtn">📲</button>
   </nav>
 
   <!-- EN VIVO -->
@@ -341,8 +392,6 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div id="liveMatches"></div>
     <div class="stitle">📅 Próximos partidos</div>
     <div id="upcomingMatches"></div>
-    <div class="stitle">✅ Resultados recientes</div>
-    <div id="recentResults"></div>
   </div>
 
   <!-- QUINIELA -->
@@ -360,12 +409,11 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div class="stitle">🏆 Predicciones del Torneo</div>
     <div class="fp-card">
       <h3>¿Quién va a ganar?</h3>
-      <div style="background:rgba(124,92,191,.1);border:1px solid rgba(124,92,191,.3);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--mut);margin-bottom:10px">
-        🔒 <strong style="color:var(--txt)">Una vez guardadas, las predicciones quedan bloqueadas</strong> hasta que el admin las desbloquee (igual que en Fantasy).
-      </div>
-      <div id="finalPredsArea">
-        <!-- Rendered by renderFinalPredsForm() -->
-      </div>
+      <div class="pf"><label>🥇 Campeón</label><input id="fp-champ" type="text" placeholder="Ej: España"></div>
+      <div class="pf"><label>🥈 Subcampeón</label><input id="fp-runner" type="text" placeholder="Ej: Brasil"></div>
+      <div class="pf"><label>👟 Máx. Goleador</label><input id="fp-scorer" type="text" placeholder="Ej: Mbappé"></div>
+      <div class="pf"><label>🌟 MVP</label><input id="fp-mvp" type="text" placeholder="Ej: Vinicius Jr"></div>
+      <button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">Guardar predicciones</button>
     </div>
     <div class="normas-card">
       <h3>📋 Normas de puntuación</h3>
@@ -392,7 +440,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   <div class="panel" id="panel-fantasy">
     <div class="fpk">
       <h3>Tu selección Fantasy</h3>
-      <div class="sub">Elige equipo y jugador. <strong>Una vez guardado queda bloqueado</strong> hasta que el admin lo permita.</div>
+      <div class="sub">Elige tu <strong>equipo</strong> (para los puntos de victoria) y tu <strong>jugador favorito</strong> de cualquier selección. Una vez guardado queda bloqueado hasta que el admin lo permita.</div>
       <div class="pts-g">
         <div class="pi">⚽ Equipo gana: <strong>+3</strong></div>
         <div class="pi">🤝 Empate: <strong>+1</strong></div>
@@ -413,9 +461,6 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   <!-- ESTADÍSTICAS -->
   <div class="panel" id="panel-stats">
     <div class="stitle">📊 Estadísticas de Jugadores</div>
-    <div style="background:var(--card);border:1px solid var(--bor);border-radius:9px;padding:10px 13px;margin-bottom:10px;font-size:11px;color:var(--mut)">
-      ℹ️ El admin registra goles y asistencias en Admin → "Goles Fantasy". Esta pantalla se <strong style="color:var(--green)">actualiza automáticamente en tiempo real</strong> cuando el admin hace cambios — no hace falta recargar.
-    </div>
     <div class="itabs" id="stats-tabs">
       <button class="it active" onclick="showStats('goals',this)">⚽ Goles</button>
       <button class="it" onclick="showStats('assists',this)">🅰️ Asistencias</button>
@@ -453,17 +498,17 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
         </div>
       </div>
       <div class="ab"><h3>🔓 Desbloquear Fantasy</h3><p style="color:var(--mut);font-size:11px;margin-bottom:7px">Permite a un participante cambiar su equipo/jugador.</p><div id="adminUnlocks"></div></div>
-      <div class="ab"><h3>🏆 Desbloquear Predicciones Torneo</h3><p style="color:var(--mut);font-size:11px;margin-bottom:7px">Permite a un participante cambiar su campeón/subcampeón/goleador/MVP.</p><div id="adminFPUnlocks"></div></div>
       <div class="ab">
-        <h3>⚽ Resultados (manual / corrección)</h3>
+        <h3>⚽ Resultados</h3>
+        <p style="color:var(--mut);font-size:11px;margin-bottom:7px">Los resultados se sincronizan automáticamente via API cada 30 segundos durante los partidos. Si hay un error puntual puedes corregirlo aquí.</p>
         <div id="adminMatches"></div>
       </div>
       <div class="ab">
         <h3>🏆 Datos Finales del Torneo</h3>
-        <div class="pf"><label>🥇 Campeón real</label><select id="tr-champ"><option value="">—</option></select></div>
-        <div class="pf"><label>🥈 Subcampeón real</label><select id="tr-runner"><option value="">—</option></select></div>
-        <div class="pf"><label>👟 Máx. Goleador</label><select id="tr-scorer"><option value="">—</option></select></div>
-        <div class="pf"><label>🌟 MVP</label><select id="tr-mvp"><option value="">—</option></select></div>
+        <div class="pf"><label>🥇 Campeón real</label><input id="tr-champ" type="text"></div>
+        <div class="pf"><label>🥈 Subcampeón real</label><input id="tr-runner" type="text"></div>
+        <div class="pf"><label>👟 Máx. Goleador</label><input id="tr-scorer" type="text"></div>
+        <div class="pf"><label>🌟 MVP</label><input id="tr-mvp" type="text"></div>
         <div class="pf"><label>🏆 Equipos en Cuartos</label><input id="tr-quarters" type="text" placeholder="España,Brasil..."></div>
         <div class="pf"><label>🏆 Equipos en Semis</label><input id="tr-semis" type="text"></div>
         <button class="btn g" style="margin-top:7px" onclick="saveTR()">Guardar y recalcular</button>
@@ -503,7 +548,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
 <script>
 const SUPABASE_URL='https://jygbsfbnkqtugmgyjgpw.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5Z2JzZmJua3F0dWdtZ3lqZ3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzA3OTQsImV4cCI6MjA5NjM0Njc5NH0.fN7bLgzzQdR_XF3I-4aKPp1xXkWzytqfLMlfmxIKqeA';
-const APP_URL=window.location.href.split('?')[0].replace(/\/$/,''); // URL dinámica automática
+const APP_URL='https://andagi10.github.io/mundial2026'; // ← cambia por tu URL real
 
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const TEAMS=['🇦🇷 Argentina','🇦🇺 Australia','🇦🇹 Austria','🇩🇿 Argelia','🇧🇪 Bélgica','🇧🇦 Bosnia y Herz.','🇧🇷 Brasil','🇨🇦 Canadá','🇨🇻 Cabo Verde','🇨🇿 Chequia','🇨🇴 Colombia','🇨🇩 DR Congo','🇭🇷 Croacia','🇨🇼 Curazao','🇨🇮 Costa de Marfil','🇪🇨 Ecuador','🇪🇬 Egipto','🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia','🇪🇸 España','🇺🇸 USA','🇫🇷 Francia','🇬🇭 Ghana','🇭🇹 Haití','🇮🇷 Irán','🇮🇶 Iraq','🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra','🇯🇵 Japón','🇯🇴 Jordania','🇲🇦 Marruecos','🇲🇽 México','🇳🇱 Países Bajos','🇳🇿 Nueva Zelanda','🇳🇴 Noruega','🇵🇦 Panamá','🇵🇾 Paraguay','🇵🇹 Portugal','🇶🇦 Qatar','🇸🇦 Arabia Saudita','🇸🇳 Senegal','🇰🇷 Corea del Sur','🇿🇦 Sudáfrica','🇨🇭 Suiza','🇸🇪 Suecia','🇹🇳 Túnez','🇹🇷 Turquía','🇺🇾 Uruguay','🇺🇿 Uzbekistán'];
@@ -664,23 +709,21 @@ const SQUADS = {
     {n:12,pos:'GK',name:'Weverton'},
     {n:4,pos:'DF',name:'Marquinhos'},
     {n:3,pos:'DF',name:'Gabriel Magalhães'},
-    {n:2,pos:'DF',name:'Danilo'},
-    {n:6,pos:'DF',name:'Wendell'},
-    {n:13,pos:'DF',name:'Guilherme Arana'},
+    {n:2,pos:'DF',name:'Wesley'},
+    {n:6,pos:'DF',name:'Alex Sandro'},
+    {n:13,pos:'DF',name:'Danilo Luiz'},
     {n:14,pos:'DF',name:'Bremer'},
     {n:5,pos:'MF',name:'Casemiro'},
     {n:8,pos:'MF',name:'Bruno Guimarães'},
     {n:20,pos:'MF',name:'Lucas Paquetá'},
-    {n:15,pos:'MF',name:'Gerson'},
-    {n:17,pos:'MF',name:'Andreas Pereira'},
+    {n:17,pos:'MF',name:'Fabinho'},
     {n:7,pos:'FW',name:'Vinícius Júnior'},
+    {n:10,pos:'FW',name:'Neymar'},
     {n:11,pos:'FW',name:'Raphinha'},
-    {n:9,pos:'FW',name:'Igor Jesus'},
+    {n:9,pos:'FW',name:'Matheus Cunha'},
     {n:22,pos:'FW',name:'Gabriel Martinelli'},
     {n:19,pos:'FW',name:'Endrick'},
-    {n:10,pos:'FW',name:'Rodrygo'},
-    {n:21,pos:'FW',name:'Savinho'},
-    {n:18,pos:'FW',name:'Luiz Henrique'},
+    {n:21,pos:'FW',name:'Luiz Henrique'},
   ],
   '🇲🇦 Marruecos': [
     {n:1,pos:'GK',name:'Yassine Bounou'},
@@ -794,26 +837,21 @@ const SQUADS = {
   ],
   '🇩🇪 Alemania': [
     {n:1,pos:'GK',name:'Manuel Neuer'},
-    {n:12,pos:'GK',name:'Oliver Baumann'},
-    {n:22,pos:'GK',name:'Alexander Nübel'},
+    {n:12,pos:'GK',name:'Marc-André ter Stegen'},
     {n:2,pos:'DF',name:'Joshua Kimmich'},
     {n:4,pos:'DF',name:'Jonathan Tah'},
     {n:5,pos:'DF',name:'Nico Schlotterbeck'},
     {n:3,pos:'DF',name:'David Raum'},
-    {n:21,pos:'DF',name:'Maximilian Mittelstädt'},
-    {n:17,pos:'DF',name:'Benjamin Henrichs'},
-    {n:8,pos:'MF',name:'Robert Andrich'},
-    {n:6,pos:'MF',name:'Pascal Groß'},
+    {n:6,pos:'DF',name:'Robert Andrich'},
+    {n:8,pos:'MF',name:'Toni Kroos'},
     {n:7,pos:'MF',name:'Florian Wirtz'},
     {n:14,pos:'MF',name:'Jamal Musiala'},
     {n:15,pos:'MF',name:'Leon Goretzka'},
-    {n:18,pos:'MF',name:'Angelo Stiller'},
     {n:10,pos:'FW',name:'Kai Havertz'},
     {n:9,pos:'FW',name:'Niclas Füllkrug'},
     {n:11,pos:'FW',name:'Leroy Sané'},
-    {n:19,pos:'FW',name:'Deniz Undav'},
-    {n:20,pos:'FW',name:'Tim Kleindienst'},
-    {n:23,pos:'FW',name:'Maximilian Beier'},
+    {n:13,pos:'FW',name:'Thomas Müller'},
+    {n:17,pos:'FW',name:'Deniz Undav'},
   ],
   '🇨🇼 Curazao': [
     {n:1,pos:'GK',name:'Eloy Room'},
@@ -829,24 +867,19 @@ const SQUADS = {
   '🇳🇱 Países Bajos': [
     {n:1,pos:'GK',name:'Bart Verbruggen'},
     {n:13,pos:'GK',name:'Mark Flekken'},
-    {n:22,pos:'GK',name:'Nick Olij'},
     {n:2,pos:'DF',name:'Denzel Dumfries'},
     {n:4,pos:'DF',name:'Virgil van Dijk'},
     {n:3,pos:'DF',name:'Nathan Aké'},
     {n:5,pos:'DF',name:'Stefan de Vrij'},
     {n:6,pos:'DF',name:'Matthijs de Ligt'},
-    {n:17,pos:'DF',name:'Jurriën Timber'},
     {n:8,pos:'MF',name:'Frenkie de Jong'},
+    {n:7,pos:'MF',name:'Steven Bergwijn'},
     {n:14,pos:'MF',name:'Tijjani Reijnders'},
-    {n:20,pos:'MF',name:'Mats Wieffer'},
-    {n:15,pos:'MF',name:'Ryan Gravenberch'},
+    {n:21,pos:'MF',name:'Georginio Wijnaldum'},
     {n:10,pos:'FW',name:'Memphis Depay'},
-    {n:7,pos:'FW',name:'Steven Bergwijn'},
-    {n:9,pos:'FW',name:'Brian Brobbey'},
+    {n:9,pos:'FW',name:'Wout Weghorst'},
     {n:11,pos:'FW',name:'Cody Gakpo'},
-    {n:18,pos:'FW',name:'Donyell Malen'},
-    {n:19,pos:'FW',name:'Wout Weghorst'},
-    {n:21,pos:'FW',name:'Xavi Simons'},
+    {n:17,pos:'FW',name:'Donyell Malen'},
   ],
   '🇯🇵 Japón': [
     {n:1,pos:'GK',name:'Shuichi Gonda'},
@@ -927,28 +960,22 @@ const SQUADS = {
   '🇪🇸 España': [
     {n:1,pos:'GK',name:'David Raya'},
     {n:13,pos:'GK',name:'Unai Simón'},
-    {n:23,pos:'GK',name:'Alex Remiro'},
     {n:2,pos:'DF',name:'Dani Carvajal'},
+    {n:4,pos:'DF',name:'Nacho Fernández'},
     {n:3,pos:'DF',name:'Alejandro Balde'},
-    {n:4,pos:'DF',name:'Aymeric Laporte'},
     {n:5,pos:'DF',name:'Robin Le Normand'},
     {n:23,pos:'DF',name:'Marc Cucurella'},
-    {n:24,pos:'DF',name:'Pedro Porro'},
-    {n:6,pos:'MF',name:'Rodri'},
     {n:8,pos:'MF',name:'Pedri'},
-    {n:15,pos:'MF',name:'Mikel Merino'},
+    {n:6,pos:'MF',name:'Rodri'},
     {n:16,pos:'MF',name:'Martín Zubimendi'},
+    {n:15,pos:'MF',name:'Mikel Merino'},
     {n:14,pos:'MF',name:'Fabián Ruiz'},
-    {n:21,pos:'MF',name:'Dani Olmo'},
-    {n:18,pos:'MF',name:'Álex Baena'},
+    {n:10,pos:'FW',name:'Dani Olmo'},
     {n:7,pos:'FW',name:'Álvaro Morata'},
     {n:9,pos:'FW',name:'Joselu'},
-    {n:10,pos:'FW',name:'Pedri'},
     {n:11,pos:'FW',name:'Ferran Torres'},
     {n:17,pos:'FW',name:'Lamine Yamal'},
     {n:22,pos:'FW',name:'Nico Williams'},
-    {n:19,pos:'FW',name:'Bryan Zaragoza'},
-    {n:20,pos:'FW',name:'Mikel Oyarzabal'},
   ],
   '🇨🇻 Cabo Verde': [
     {n:1,pos:'GK',name:'Vozinha'},
@@ -1055,25 +1082,21 @@ const SQUADS = {
   '🇫🇷 Francia': [
     {n:1,pos:'GK',name:'Mike Maignan'},
     {n:23,pos:'GK',name:'Brice Samba'},
-    {n:16,pos:'GK',name:'Guillaume Restes'},
     {n:2,pos:'DF',name:'Malo Gusto'},
     {n:5,pos:'DF',name:'Jules Koundé'},
     {n:3,pos:'DF',name:'Théo Hernández'},
     {n:4,pos:'DF',name:'William Saliba'},
     {n:24,pos:'DF',name:'Ibrahima Konaté'},
-    {n:21,pos:'DF',name:'Leny Yoro'},
+    {n:6,pos:'DF',name:'Lucas Hernández'},
     {n:8,pos:'MF',name:'Aurélien Tchouaméni'},
     {n:14,pos:'MF',name:'Adrien Rabiot'},
     {n:6,pos:'MF',name:'N\'Golo Kanté'},
     {n:15,pos:'MF',name:'Warren Zaïre-Emery'},
-    {n:18,pos:'MF',name:'Mattéo Guendouzi'},
     {n:7,pos:'FW',name:'Ousmane Dembélé'},
     {n:10,pos:'FW',name:'Kylian Mbappé'},
-    {n:9,pos:'FW',name:'Randal Kolo Muani'},
+    {n:9,pos:'FW',name:'Olivier Giroud'},
     {n:11,pos:'FW',name:'Bradley Barcola'},
     {n:17,pos:'FW',name:'Rayan Cherki'},
-    {n:19,pos:'FW',name:'Michael Olise'},
-    {n:20,pos:'FW',name:'Marcus Thuram'},
   ],
   '🇸🇳 Senegal': [
     {n:1,pos:'GK',name:'Édouard Mendy'},
@@ -1121,27 +1144,23 @@ const SQUADS = {
   ],
   '🇦🇷 Argentina': [
     {n:1,pos:'GK',name:'Emiliano Martínez'},
-    {n:12,pos:'GK',name:'Gerónimo Rulli'},
-    {n:23,pos:'GK',name:'Franco Armani'},
+    {n:12,pos:'GK',name:'Juan Musso'},
     {n:2,pos:'DF',name:'Gonzalo Montiel'},
     {n:3,pos:'DF',name:'Nicolás Tagliafico'},
     {n:4,pos:'DF',name:'Germán Pezzella'},
     {n:6,pos:'DF',name:'Lisandro Martínez'},
     {n:13,pos:'DF',name:'Cristian Romero'},
     {n:19,pos:'DF',name:'Nicolás Otamendi'},
-    {n:26,pos:'DF',name:'Nahuel Molina'},
     {n:8,pos:'MF',name:'Enzo Fernández'},
     {n:5,pos:'MF',name:'Leandro Paredes'},
     {n:7,pos:'MF',name:'Rodrigo De Paul'},
     {n:14,pos:'MF',name:'Exequiel Palacios'},
     {n:25,pos:'MF',name:'Alexis Mac Allister'},
-    {n:18,pos:'MF',name:'Giovani Lo Celso'},
     {n:10,pos:'FW',name:'Lionel Messi'},
     {n:9,pos:'FW',name:'Julián Álvarez'},
     {n:11,pos:'FW',name:'Ángel Di María'},
     {n:22,pos:'FW',name:'Lautaro Martínez'},
     {n:23,pos:'FW',name:'Paulo Dybala'},
-    {n:16,pos:'FW',name:'Thiago Almada'},
   ],
   '🇩🇿 Argelia': [
     {n:1,pos:'GK',name:'Raïs M\'Bolhi'},
@@ -1188,25 +1207,21 @@ const SQUADS = {
   '🇵🇹 Portugal': [
     {n:1,pos:'GK',name:'Rui Patrício'},
     {n:12,pos:'GK',name:'Diogo Costa'},
-    {n:22,pos:'GK',name:'José Sá'},
     {n:2,pos:'DF',name:'João Cancelo'},
     {n:3,pos:'DF',name:'Nuno Mendes'},
     {n:4,pos:'DF',name:'Rúben Dias'},
-    {n:5,pos:'DF',name:'Gonçalo Inácio'},
+    {n:5,pos:'DF',name:'Pepe'},
     {n:6,pos:'DF',name:'Danilo Pereira'},
-    {n:21,pos:'DF',name:'Nelson Semedo'},
-    {n:8,pos:'MF',name:'João Neves'},
+    {n:8,pos:'MF',name:'João Moutinho'},
     {n:14,pos:'MF',name:'William Carvalho'},
     {n:16,pos:'MF',name:'Vitinha'},
     {n:10,pos:'MF',name:'Bernardo Silva'},
-    {n:18,pos:'MF',name:'Bruno Fernandes'},
-    {n:19,pos:'MF',name:'Rúben Neves'},
+    {n:8,pos:'MF',name:'Bruno Fernandes'},
     {n:7,pos:'FW',name:'Cristiano Ronaldo'},
-    {n:9,pos:'FW',name:'Gonçalo Ramos'},
+    {n:9,pos:'FW',name:'André Silva'},
     {n:11,pos:'FW',name:'Rafael Leão'},
     {n:17,pos:'FW',name:'Pedro Neto'},
     {n:23,pos:'FW',name:'João Félix'},
-    {n:20,pos:'FW',name:'Francisco Conceição'},
   ],
   '🇺🇿 Uzbekistán': [
     {n:1,pos:'GK',name:'Utkir Yusupov'},
@@ -1298,170 +1313,138 @@ const SQUADS = {
   '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra': [
     {n:1,pos:'GK',name:'Jordan Pickford'},
     {n:13,pos:'GK',name:'Nick Pope'},
-    {n:22,pos:'GK',name:'Dean Henderson'},
     {n:2,pos:'DF',name:'Trent Alexander-Arnold'},
     {n:5,pos:'DF',name:'John Stones'},
     {n:3,pos:'DF',name:'Luke Shaw'},
     {n:4,pos:'DF',name:'Marc Guehi'},
     {n:6,pos:'DF',name:'Harry Maguire'},
-    {n:12,pos:'DF',name:'Kyle Walker'},
-    {n:21,pos:'DF',name:'Ezri Konsa'},
     {n:8,pos:'MF',name:'Declan Rice'},
     {n:7,pos:'MF',name:'Jack Grealish'},
     {n:14,pos:'MF',name:'Kieran Trippier'},
     {n:15,pos:'MF',name:'Phil Foden'},
-    {n:16,pos:'MF',name:'Conor Gallagher'},
-    {n:18,pos:'MF',name:'Adam Wharton'},
     {n:10,pos:'FW',name:'Jude Bellingham'},
     {n:9,pos:'FW',name:'Harry Kane'},
     {n:11,pos:'FW',name:'Bukayo Saka'},
-    {n:17,pos:'FW',name:'Cole Palmer'},
-    {n:19,pos:'FW',name:'Ollie Watkins'},
-    {n:20,pos:'FW',name:'Anthony Gordon'},
-    {n:23,pos:'FW',name:'Eberechi Eze'},
+    {n:17,pos:'FW',name:'Rashford'},
+    {n:20,pos:'FW',name:'Ollie Watkins'},
   ],
 };
 
 
-// ── BRACKET OFICIAL R32 — Datos reales FIFA World Cup 2026 ─────────
-// Fuente: calendario oficial FIFA / imágenes proporcionadas
+// ── BRACKET OFICIAL R32 (fuente: FIFA / worldcuppass.com) ─────────
+// Formato: {id, h: "descripcion home", a: "descripcion away", date, venue, matchId en DB}
+// Bracket oficial FIFA World Cup 2026 — R32 (fuente: FIFA/worldcuppass.com)
+// Descripción legible de cada cruce
 const R32_DEFS=[
-  // Partido 73: A2 vs B2 — 28 Jun, Inglewood CA
-  {num:'73',h:'2A',a:'2B',date:'Sáb 28 Jun 21:00h',venue:'SoFi, Inglewood, CA'},
-  // Partido 74: E1 vs 3er(A/B/C/D/F) — 29 Jun, Foxborough MA
-  {num:'74',h:'1E',a:'3er A/B/C/D/F',date:'Dom 29 Jun 22:30h',venue:'Gillette, Foxborough, MA'},
-  // Partido 75: F1 vs C2 — 30 Jun, Monterrey
-  {num:'75',h:'1F',a:'2C',date:'Lun 30 Jun 03:00h',venue:'BBVA, Monterrey'},
-  // Partido 76: C1 vs F2 — 29 Jun, Houston
-  {num:'76',h:'1C',a:'2F',date:'Dom 29 Jun 19:00h',venue:'NRG, Houston, TX'},
-  // Partido 77: I1 vs 3er(C/D/F/G/H) — 30 Jun, NJ
-  {num:'77',h:'1I',a:'3er C/D/F/G/H',date:'Lun 30 Jun 23:00h',venue:'MetLife, E. Rutherford, NJ'},
-  // Partido 78: E2 vs I2 — 30 Jun, Arlington
-  {num:'78',h:'2E',a:'2I',date:'Lun 30 Jun 19:00h',venue:'AT&T, Arlington, TX'},
-  // Partido 79: A1 vs 3er(C/E/F/H/I) — 1 Jul, Ciudad de México
-  {num:'79',h:'1A',a:'3er C/E/F/H/I',date:'Mar 1 Jul 03:00h',venue:'Azteca, Ciudad de México'},
-  // Partido 80: L1 vs 3er(E/H/I/J/K) — 1 Jul, Atlanta
-  {num:'80',h:'1L',a:'3er E/H/I/J/K',date:'Mar 1 Jul 18:00h',venue:'MB, Atlanta, GA'},
-  // Partido 81: D1 vs 3er(B/E/F/I/J) — 2 Jul, Santa Clara
-  {num:'81',h:'1D',a:'3er B/E/F/I/J',date:'Mié 2 Jul 02:00h',venue:"Levi's, Santa Clara, CA"},
-  // Partido 82: G1 vs 3er(A/E/H/I/J) — 1 Jul, Seattle
-  {num:'82',h:'1G',a:'3er A/E/H/I/J',date:'Mar 1 Jul 22:00h',venue:'Lumen Field, Seattle, WA'},
-  // Partido 83: K2 vs L2 — 3 Jul, Toronto
-  {num:'83',h:'2K',a:'2L',date:'Jue 3 Jul 01:00h',venue:'BMO, Toronto, ON'},
-  // Partido 84: H1 vs J2 — 2 Jul, Inglewood
-  {num:'84',h:'1H',a:'2J',date:'Mié 2 Jul 21:00h',venue:'SoFi, Inglewood, CA'},
-  // Partido 85: B1 vs 3er(E/F/G/I/J) — 3 Jul, Vancouver
-  {num:'85',h:'1B',a:'3er E/F/G/I/J',date:'Jue 3 Jul 05:00h',venue:'BC Place, Vancouver, BC'},
-  // Partido 86: J1 vs H2 — 4 Jul, Miami
-  {num:'86',h:'1J',a:'2H',date:'Vie 4 Jul 00:00h',venue:'Hard Rock, Miami Gardens, FL'},
-  // Partido 87: K1 vs 3er(D/E/I/J/L) — 4 Jul, Kansas City
-  {num:'87',h:'1K',a:'3er D/E/I/J/L',date:'Vie 4 Jul 03:30h',venue:'Arrowhead, Kansas City, MO'},
-  // Partido 88: D2 vs G2 — 3 Jul, Arlington
-  {num:'88',h:'2D',a:'2G',date:'Jue 3 Jul 20:00h',venue:'AT&T, Arlington, TX'},
+  {num:'73',h:'2º Grupo A',a:'2º Grupo B',date:'Dom 28 Jun',time:'21:00',venue:'SoFi, Los Ángeles'},
+  {num:'74',h:'1º Grupo E',a:'Mejor 3º A/B/C/D/F',date:'Lun 29 Jun',time:'21:00',venue:'Gillette, Boston'},
+  {num:'75',h:'1º Grupo F',a:'2º Grupo C',date:'Lun 29 Jun',time:'03:00',venue:'BBVA, Monterrey'},
+  {num:'76',h:'1º Grupo C',a:'2º Grupo F',date:'Lun 29 Jun',time:'21:00',venue:'NRG, Houston'},
+  {num:'77',h:'1º Grupo I',a:'Mejor 3º C/D/F/G/H',date:'Mar 30 Jun',time:'21:00',venue:'MetLife, Nueva York'},
+  {num:'78',h:'2º Grupo E',a:'2º Grupo I',date:'Mar 30 Jun',time:'03:00',venue:'AT&T, Dallas'},
+  {num:'79',h:'1º Grupo A',a:'Mejor 3º C/E/F/H/I',date:'Mar 30 Jun',time:'21:00',venue:'Azteca, CDMX'},
+  {num:'80',h:'1º Grupo L',a:'Mejor 3º E/H/I/J/K',date:'Mié 1 Jul',time:'21:00',venue:'MB Stadium, Atlanta'},
+  {num:'81',h:'1º Grupo D',a:'Mejor 3º B/E/F/I/J',date:'Mié 1 Jul',time:'21:00',venue:"Levi's, San Francisco"},
+  {num:'82',h:'1º Grupo G',a:'Mejor 3º A/E/H/I/J',date:'Mié 1 Jul',time:'21:00',venue:'Lumen Field, Seattle'},
+  {num:'83',h:'2º Grupo K',a:'2º Grupo L',date:'Jue 2 Jul',time:'21:00',venue:'BMO Field, Toronto'},
+  {num:'84',h:'1º Grupo H',a:'2º Grupo J',date:'Jue 2 Jul',time:'21:00',venue:'SoFi, Los Ángeles'},
+  {num:'85',h:'1º Grupo B',a:'Mejor 3º E/F/G/I/J',date:'Jue 2 Jul',time:'21:00',venue:'BC Place, Vancouver'},
+  {num:'86',h:'1º Grupo J',a:'2º Grupo H',date:'Vie 3 Jul',time:'21:00',venue:'Hard Rock, Miami'},
+  {num:'87',h:'1º Grupo K',a:'Mejor 3º D/E/I/J/L',date:'Vie 3 Jul',time:'21:00',venue:'Arrowhead, Kansas City'},
+  {num:'88',h:'2º Grupo D',a:'2º Grupo G',date:'Vie 3 Jul',time:'21:00',venue:'AT&T Stadium, Dallas'},
 ];
 
-let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null,_players:{}};
+let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null,_players:{},authUid:null,authEmail:'',userGroups:[],tournament:null,tournamentId:null};
 
-function saveSess(){localStorage.setItem('mw26s',JSON.stringify({groupId:S.groupId,groupName:S.groupName,groupCode:S.groupCode,adminPin:S.adminPin,userId:S.userId,userName:S.userName,isAdmin:S.isAdmin}));}
-function loadSess(){const r=localStorage.getItem('mw26s');if(!r)return false;Object.assign(S,JSON.parse(r));return !!(S.groupId&&S.userId);}
+function saveSess(){localStorage.setItem('mw26s',JSON.stringify({groupId:S.groupId,groupName:S.groupName,groupCode:S.groupCode,adminPin:S.adminPin,userId:S.userId,userName:S.userName,isAdmin:S.isAdmin,authUid:S.authUid,authEmail:S.authEmail}));}
+function loadSess(){const r=localStorage.getItem('mw26s');if(!r)return false;Object.assign(S,JSON.parse(r));return !!(S.authUid&&S.userId&&S.groupId);}
+function clearGroupSess(){const keep={authUid:S.authUid,authEmail:S.authEmail};Object.assign(S,{groupId:null,userId:null,groupName:'',groupCode:'',adminPin:'',isAdmin:false});Object.assign(S,keep);localStorage.removeItem('mw26s');}
 
 // AUTH
 function switchTab(t){document.querySelectorAll('.atab').forEach((el,i)=>el.classList.toggle('active',(i===0&&t==='join')||(i===1&&t==='create')));document.getElementById('form-join').classList.toggle('active',t==='join');document.getElementById('form-create').classList.toggle('active',t==='create');}
 async function joinGroup(){
-  const code=document.getElementById('join-code').value.trim().toUpperCase(),name=document.getElementById('join-name').value.trim();
+  if(!S.authUid){showErr('err-join','Inicia sesión primero');return;}
+  const code=document.getElementById('dash-join-code').value.trim().toUpperCase();
+  const name=document.getElementById('dash-join-name').value.trim();
   if(code.length<4){showErr('err-join','Introduce el código del grupo');return;}
-  if(!name){showErr('err-join','Introduce tu nombre');return;}
+  if(!name){showErr('err-join','Introduce tu nombre/apodo');return;}
   hideErr('err-join');
   const{data:grp,error:ge}=await sb.from('groups').select('*').eq('invite_code',code).single();
   if(ge||!grp){showErr('err-join','Código no encontrado ❌');return;}
-  const{data:ex}=await sb.from('users').select('id').eq('group_id',grp.id).eq('username',name).single();
-  let uid=ex?.id;
-  if(!uid){const{data:nu,error:ue}=await sb.from('users').insert({group_id:grp.id,username:name}).select().single();if(ue){showErr('err-join','Error: '+ue.message);return;}uid=nu.id;}
-  S.groupId=grp.id;S.groupName=grp.name;S.groupCode=grp.invite_code;S.adminPin=grp.admin_pin;S.userId=uid;S.userName=name;S.isAdmin=grp.admin_id===uid;
-  saveSess();await initApp();
+  // Check not already in group
+  const{data:ex}=await sb.from('users').select('id').eq('group_id',grp.id).eq('auth_uid',S.authUid).single();
+  if(ex){toast('Ya eres miembro de este grupo','info');enterGroup(grp.id);return;}
+  const{data:nu,error:ue}=await sb.from('users').insert({group_id:grp.id,username:name,auth_uid:S.authUid,email:S.authEmail}).select().single();
+  if(ue){showErr('err-join','Error: '+ue.message);return;}
+  toast('✓ Te has unido a '+grp.name+'!');
+  await loadUserGroups();renderDashboard();
 }
 async function createGroup(){
-  const gn=document.getElementById('c-gname').value.trim(),un=document.getElementById('c-uname').value.trim(),pin=document.getElementById('c-pin').value;
+  if(!S.authUid){toast('Inicia sesión primero','err');return;}
+  const gn=document.getElementById('dash-gname').value.trim();
+  const un=document.getElementById('dash-uname').value.trim();
+  const pin=document.getElementById('dash-pin').value;
   if(!gn){showErr('err-create','Nombre del grupo requerido');return;}
   if(!un){showErr('err-create','Tu nombre requerido');return;}
   if(pin.length<4){showErr('err-create','PIN mínimo 4 dígitos');return;}
   hideErr('err-create');
-  const{data:grp,error:ge}=await sb.from('groups').insert({name:gn,admin_pin:pin}).select().single();
+  const{data:grp,error:ge}=await sb.from('groups').insert({name:gn,admin_pin:pin,admin_email:S.authEmail}).select().single();
   if(ge){showErr('err-create','Error: '+ge.message);return;}
-  const{data:user,error:ue}=await sb.from('users').insert({group_id:grp.id,username:un}).select().single();
+  const{data:user,error:ue}=await sb.from('users').insert({group_id:grp.id,username:un,auth_uid:S.authUid,email:S.authEmail}).select().single();
   if(ue){showErr('err-create','Error: '+ue.message);return;}
   await sb.from('groups').update({admin_id:user.id}).eq('id',grp.id);
-  S.groupId=grp.id;S.groupName=grp.name;S.groupCode=grp.invite_code;S.adminPin=pin;S.userId=user.id;S.userName=un;S.isAdmin=true;
-  saveSess();toast('¡Grupo creado! Código: '+grp.invite_code+' 🎉');await initApp();
+  toast('¡Grupo '+grp.name+' creado! 🎉');
+  await loadUserGroups();renderDashboard();
 }
-function switchGroup(){localStorage.removeItem('mw26s');Object.assign(S,{groupId:null,userId:null,groupName:'',groupCode:'',adminAuthed:false});stopRT();stopLive();showScreen('auth');}
+async function enterGroup(groupId){
+  const grp=S.userGroups.find(g=>g.group_id===groupId);
+  if(!grp)return;
+  S.groupId=grp.group_id;S.groupName=grp.group_name;S.groupCode=grp.group_code;
+  S.userId=grp.user_id;S.userName=grp.username;S.isAdmin=grp.is_admin;
+  // Get admin pin
+  const{data:gd}=await sb.from('groups').select('admin_pin').eq('id',groupId).single();
+  S.adminPin=gd?.admin_pin||'';
+  saveSess();await initApp();
+}
+function switchGroup(){stopRT();stopLive();adminAuthed=false;clearGroupSess();showScreen('dashboard');}
+async function loadUserGroups(){
+  if(!S.authUid)return;
+  const{data}=await sb.from('users').select('id,username,group_id,groups(id,name,invite_code,admin_id,admin_pin)').eq('auth_uid',S.authUid);
+  S.userGroups=(data||[]).map(u=>({user_id:u.id,username:u.username,group_id:u.group_id,group_name:u.groups?.name,group_code:u.groups?.invite_code,is_admin:u.groups?.admin_id===u.id,admin_pin:u.groups?.admin_pin}));
+}
 
 // INIT
 async function initApp(){
   showScreen('app');
   document.getElementById('gname-badge').textContent=S.groupName;
   document.getElementById('gcode-badge').textContent='# '+S.groupCode;
+  document.getElementById('tournament-badge').textContent=S.tournament?.emoji+' '+S.tournament?.short_name||'';
   setSS('sync','Cargando...');
-  await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
-  renderAll();setSS('ok','Sincronizado');startRT();startLive();
+  await loadTournament();await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
+  renderAll();setSS('ok','Sincronizado');startRT();startLive();preloadPlayers();
 }
-function renderAll(){renderLive();renderMatches();renderFantasyForm();renderFinalPredsForm();renderBracket();}
+function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();}
+async function preloadPlayers(){
+  // Pre-load all players from DB for faster fantasy form
+  await loadAllPlayersFromDB();
+}
 
 // DATA
-async function loadMatches(){const{data}=await sb.from('matches').select('*').order('match_date');S.matches=data||[];}
-async function loadPreds(){const{data}=await sb.from('predictions').select('*').eq('user_id',S.userId);S.preds={};(data||[]).forEach(p=>{S.preds[p.match_id]={home:p.home_pred,away:p.away_pred};});}
-async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};renderFinalPredsForm();}
-function renderFinalPredsForm(){
-  const area=document.getElementById('finalPredsArea');if(!area)return;
-  const fp=S.finalPreds||{};
-  const locked=fp.locked;
-  const unl=fp.unlocked_by_admin;
-  const teamOpts=TEAMS.map(t=>`<option value="${t}">${t}</option>`).join('');
-  let allPlayers=[];Object.entries(SQUADS).forEach(([team,squad])=>{squad.forEach(p=>{allPlayers.push({name:p.name,team,pos:p.pos});});});
-  allPlayers.sort((a,b)=>a.name.localeCompare(b.name));
-  const playerOpts=allPlayers.map(p=>`<option value="${p.name}">${p.name} (${p.team.replace(/^[^\s]+ /,'')})</option>`).join('');
-  if(locked&&!unl){
-    area.innerHTML=`
-    <div class="pf"><label>🥇 Campeón</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.champion||'—'}</span></div>
-    <div class="pf"><label>🥈 Subcampeón</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.runner_up||'—'}</span></div>
-    <div class="pf"><label>👟 Máx. Goleador</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.top_scorer||'—'}</span></div>
-    <div class="pf"><label>🌟 MVP</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.mvp||'—'}</span></div>
-    <div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee para cambiar</div>`;
-    return;
-  }
-  const champV=fp.champion||'',runnerV=fp.runner_up||'',scorerV=fp.top_scorer||'',mvpV=fp.mvp||'';
-  area.innerHTML=`
-  <div class="pf"><label>🥇 Campeón</label>
-    <select id="fp-champ"><option value="">— Selecciona —</option>${teamOpts}</select>
-  </div>
-  <div class="pf"><label>🥈 Subcampeón</label>
-    <select id="fp-runner"><option value="">— Selecciona —</option>${teamOpts}</select>
-  </div>
-  <div class="pf"><label>👟 Máx. Goleador</label>
-    <select id="fp-scorer"><option value="">— Selecciona —</option>${playerOpts}</select>
-  </div>
-  <div class="pf"><label>🌟 MVP</label>
-    <select id="fp-mvp"><option value="">— Selecciona —</option>${playerOpts}</select>
-  </div>
-  ${unl?'<div class="unlockb">🔓 Desbloqueado por admin — puedes modificar</div>':''}
-  <button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">🔒 Guardar y bloquear</button>
-  ${!locked?'<p style="font-size:10px;color:var(--mut);margin-top:5px">⚠️ Una vez guardadas no podrás cambiarlas sin el admin</p>':''}`;
-  // Set values after DOM insert
-  requestAnimationFrame(()=>{
-    const s=(id,v)=>{const el=document.getElementById(id);if(el&&v){el.value=v;if(!el.value){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v;}}};
-    s('fp-champ',champV);s('fp-runner',runnerV);s('fp-scorer',scorerV);s('fp-mvp',mvpV);
-  });
+async function loadTournament(){
+  const{data}=await sb.from('tournaments').select('*').eq('active',true).single();
+  S.tournament=data||null;S.tournamentId=data?.id||null;
 }
-function populateFinalPredSelects(data){renderFinalPredsForm();}
+async function loadMatches(){
+  let q=sb.from('matches').select('*').order('match_date');
+  if(S.tournamentId)q=q.eq('tournament_id',S.tournamentId);
+  const{data}=await q;S.matches=data||[];
+}
+async function loadPreds(){const{data}=await sb.from('predictions').select('*').eq('user_id',S.userId);S.preds={};(data||[]).forEach(p=>{S.preds[p.match_id]={home:p.home_pred,away:p.away_pred};});}
+async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};if(data){const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('fp-champ',data.champion);s('fp-runner',data.runner_up);s('fp-scorer',data.top_scorer);s('fp-mvp',data.mvp);}}
 async function loadFantasy(){const{data}=await sb.from('fantasy').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.fantasy=data||null;}
 async function loadAllUsers(){const{data}=await sb.from('users').select('*').eq('group_id',S.groupId);S.allUsers=data||[];}
 async function loadAllFantasy(){const{data}=await sb.from('fantasy').select('*').eq('group_id',S.groupId);S.allFantasy=data||[];}
 async function loadAllFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('group_id',S.groupId);S.allFinalPreds=data||[];}
-// Note: The final_predictions table needs 'locked' (boolean, default false) and 
-// 'unlocked_by_admin' (boolean, default false) columns in Supabase.
-// Run in Supabase SQL Editor:
-// ALTER TABLE final_predictions ADD COLUMN IF NOT EXISTS locked boolean DEFAULT false;
-// ALTER TABLE final_predictions ADD COLUMN IF NOT EXISTS unlocked_by_admin boolean DEFAULT false;
 async function loadTR(){const{data}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single();S.tr=data||null;}
 async function loadAllPreds(){const ids=S.allUsers.map(u=>u.id);if(!ids.length)return{};const{data}=await sb.from('predictions').select('*').in('user_id',ids);const m={};(data||[]).forEach(p=>{if(!m[p.user_id])m[p.user_id]={};m[p.user_id][p.match_id]={home:p.home_pred,away:p.away_pred};});return m;}
 
@@ -1485,15 +1468,12 @@ async function doLiveFetch(){
   fetchCount++;
   lastFetchTime=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   setSS('sync','↻ Actualizando...');
-  // Recargar partidos Y fantasy para stats actualizadas
-  await Promise.all([loadMatches(),loadAllFantasy()]);
-  renderLive();renderMatches();renderBracket();renderFantasyRanking();
-  // Si el panel de stats está activo, refrescarlo también
-  if(document.getElementById('panel-stats')?.classList.contains('active'))renderStats();
+  await loadMatches();
+  renderLive();renderMatches();renderBracket();
   const live=S.matches.filter(m=>m.status==='IN_PLAY');
   setSS('ok','Act. '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}));
   updateDebug();
-  dbLog(`Fetch #${fetchCount} OK — ${live.length} vivos`);
+  dbLog(`Fetch #${fetchCount} OK — ${live.length} partidos vivos`);
 }
 function updateTimerUI(){
   const prog=document.getElementById('timerProg');
@@ -1536,14 +1516,7 @@ function startRT(){
       setSS('sync','⚡ Cambio detectado...');await loadMatches();renderAll();renderRk(S.rkMode);renderFantasyRanking();
       setSS('ok','⚡ Actualizado en tiempo real');liveSecs=REFRESH_SECS;updateTimerUI();dbLog('Realtime update recibido');
     })
-    .on('postgres_changes',{event:'*',schema:'public',table:'fantasy',filter:'group_id=eq.'+S.groupId},async()=>{
-      setSS('sync','⚡ Fantasy actualizado...');
-      await loadFantasy();await loadAllFantasy();
-      renderFantasyForm();renderFantasyRanking();renderRk(S.rkMode);
-      if(document.getElementById('panel-stats').classList.contains('active'))renderStats();
-      setSS('ok','⚡ Estadísticas actualizadas');
-      dbLog('Realtime fantasy update recibido — stats recargadas');
-    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'fantasy',filter:'group_id=eq.'+S.groupId},async()=>{await loadFantasy();await loadAllFantasy();renderFantasyForm();renderFantasyRanking();})
     .subscribe();
 }
 function stopRT(){if(rtCh){rtCh.unsubscribe();rtCh=null;}}
@@ -1584,26 +1557,12 @@ function renderLive(){
   else{
     upEl.innerHTML=upcoming.map(m=>{
       const d=new Date(m.match_date);
-      const dStr=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
-      const tStr=d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      const dStr=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short',timeZone:'Europe/Madrid'});
+      const tStr=d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});
       const pred=S.preds[m.id]||{};
       const hasPred=pred.home!==undefined;
       return`<div class="mc"><div class="mh"><span class="mph">${m.phase==='Grupos'?'Gr '+m.group_code:m.phase}</span><span class="mm">${dStr} · ${tStr}h · ${m.stadium||''}</span>${hasPred?'<span style="font-size:9px;color:var(--acc)">✓ Apostado</span>':''}</div><div class="pr"><div class="mteams"><span class="tn">${m.home}</span><span class="vs">vs</span><span class="tn r">${m.away}</span></div></div></div>`;
     }).join('');
-  }
-  // Recent results
-  const recentEl=document.getElementById('recentResults');
-  if(recentEl){
-    const finished=S.matches.filter(m=>m.status==='FINISHED').sort((a,b)=>new Date(b.match_date)-new Date(a.match_date)).slice(0,8);
-    if(!finished.length){recentEl.innerHTML='<p style="color:var(--mut);font-size:12px;padding:8px 0">Sin resultados todavía</p>';}
-    else{
-      recentEl.innerHTML=finished.map(m=>{
-        const pred=S.preds[m.id]||{};
-        const pts=pred.home!==undefined?calcM({home:pred.home,away:pred.away},{home:m.home_score,away:m.away_score}):null;
-        const badge=pts!==null?(pts===3?'<span class="rb ok">+3</span>':pts===1?'<span class="rb par">+1</span>':'<span class="rb no">0</span>'):'';
-        return`<div class="mc fin"><div class="mh"><span class="mph">${m.phase==='Grupos'?'Gr '+m.group_code:m.phase}</span><span style="font-size:9px;color:var(--green)">✓ Final</span>${badge}</div><div class="pr"><div class="mteams"><span class="tn">${m.home}</span><span class="vs">vs</span><span class="tn r">${m.away}</span></div><span class="fsc">${m.home_score}—${m.away_score}</span></div></div>`;
-      }).join('');
-    }
   }
 }
 
@@ -1621,16 +1580,7 @@ function isLocked(m){
   }
   return false;
 }
-function isTBD(s){return s&&(s.startsWith('W-')||s.startsWith('L-')||/^[12][A-L]$/.test(s)||/^3er/.test(s)||s.includes('/'));}
-function fmtTBD(s){
-  if(!s)return s;
-  if(/^1([A-L])$/.test(s)){const g=s.match(/^1([A-L])$/)[1];return`1º Grupo ${g}`;}
-  if(/^2([A-L])$/.test(s)){const g=s.match(/^2([A-L])$/)[1];return`2º Grupo ${g}`;}
-  if(/^W-(\d+)$/.test(s)){const n=s.match(/^W-(\d+)$/)[1];return`Ganador P${n}`;}
-  if(/^L-(\d+)$/.test(s)){const n=s.match(/^L-(\d+)$/)[1];return`Perdedor P${n}`;}
-  if(/^3er/.test(s))return`3er mejor (${s.replace('3er ','')})`;
-  return s;
-}
+function isTBD(s){return s&&(s.startsWith('W-')||s.startsWith('L-')||/^[12][A-L]$/.test(s)||s.includes('/'));}
 
 function renderMatches(){
   const list=document.getElementById('matchesList');if(!list)return;
@@ -1640,7 +1590,7 @@ function renderMatches(){
     const locked=isLocked(m),isElim=m.phase!=='Grupos';
     const tbdH=isTBD(m.home),tbdA=isTBD(m.away);
     const pred=S.preds[m.id]||{};
-    const dStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'}):m.phase;
+    const dStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short',timeZone:'Europe/Madrid'}):m.phase;
     if(dStr!==lastD){lastD=dStr;const dl=document.createElement('div');dl.className='day-lbl';dl.textContent=dStr;list.appendChild(dl);}
     let badge='';
     if(fin&&pred.home!==undefined){const p=calcM({home:pred.home,away:pred.away},{home:m.home_score,away:m.away_score});badge=p===3?'<span class="rb ok">✓ +3</span>':p===1?'<span class="rb par">~ +1</span>':'<span class="rb no">✗ 0</span>';}
@@ -1657,12 +1607,10 @@ function renderMatches(){
       score=`<div class="si"><input type="number" min="0" max="30" value="${ph}" placeholder="0" onchange="savePred('${m.id}','home',this.value)"><span>—</span><input type="number" min="0" max="30" value="${pa}" placeholder="0" onchange="savePred('${m.id}','away',this.value)"></div>`;
     }
     const phB=isElim?`<span class="elph">${m.phase}</span>`:`<span class="mph">Gr ${m.group_code||''}</span>`;
-    const tStr=m.match_date?new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';
+    const tStr=m.match_date?new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}):'';
     let cls='mc';if(fin)cls+=' fin';else if(live)cls+=' lv';if(isElim)cls+=' elim';
     const c=document.createElement('div');c.className=cls;c.dataset.phase=m.phase;
-    const dispH=tbdH?fmtTBD(m.home):m.home;
-    const dispA=tbdA?fmtTBD(m.away):m.away;
-    c.innerHTML=`<div class="mh">${phB}<span class="mm">${tStr}h · ${m.stadium||''}</span>${live?`<span class="lbadge">🔴 VIVO${m.minute?' '+m.minute+"'":''}`:``}${fin?'<span style="font-size:9px;color:var(--green)">✓ Final</span>':''}${locked&&!fin&&!live?'<span class="lock-badge">🔒 Cerrado</span>':''}</div><div class="pr"><div class="mteams"><span class="tn">${dispH}</span><span class="vs">vs</span><span class="tn r">${dispA}</span></div>${score}${badge}<span class="psv" id="sv${m.id}"></span></div>`;
+    c.innerHTML=`<div class="mh">${phB}<span class="mm">${tStr}h · ${m.stadium||''}</span>${live?`<span class="lbadge">🔴 VIVO${m.minute?' '+m.minute+"'":''}`:``}${fin?'<span style="font-size:9px;color:var(--green)">✓ Final</span>':''}${locked&&!fin&&!live?'<span class="lock-badge">🔒 Cerrado</span>':''}</div><div class="pr"><div class="mteams"><span class="tn">${m.home}</span><span class="vs">vs</span><span class="tn r">${m.away}</span></div>${score}${badge}<span class="psv" id="sv${m.id}"></span></div>`;
     list.appendChild(c);
   });
 }
@@ -1683,15 +1631,8 @@ async function savePred(mid,side,val){
   dbLog(`Pred saved: match ${mid} → ${p.home}-${p.away}`);
 }
 async function saveFinalPreds(){
-  const champ=document.getElementById('fp-champ')?.value.trim();
-  const runner=document.getElementById('fp-runner')?.value.trim();
-  const scorer=document.getElementById('fp-scorer')?.value.trim();
-  const mvp=document.getElementById('fp-mvp')?.value.trim();
-  if(!champ){toast('Selecciona al menos el campeón','err');return;}
-  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:champ,runner_up:runner,top_scorer:scorer,mvp:mvp,locked:true,unlocked_by_admin:false,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
-  if(error){toast('Error: '+error.message,'err');return;}
-  await loadFinalPreds();await loadAllFinalPreds();
-  toast('¡Predicciones guardadas y bloqueadas! 🏆🔒');
+  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:document.getElementById('fp-champ').value.trim(),runner_up:document.getElementById('fp-runner').value.trim(),top_scorer:document.getElementById('fp-scorer').value.trim(),mvp:document.getElementById('fp-mvp').value.trim(),updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
+  if(error){toast('Error: '+error.message,'err');return;}await loadFinalPreds();toast('¡Predicciones guardadas! 🏆');
 }
 
 // ── BRACKET VISUAL ────────────────────────────────────────────────
@@ -1722,87 +1663,107 @@ function renderBracketGroups(){
 }
 function renderBracketKO(){
   const el=document.getElementById('bracketKO');if(!el)return;
+  // Build visual bracket with boxes and lines
   const phases=['R32','Octavos','Cuartos','Semis','Final'];
-  const phaseLabels={R32:'Ronda de 32 (16 partidos)',Octavos:'Octavos de Final',Cuartos:'Cuartos de Final',Semis:'Semifinales',Final:'Gran Final'};
-  const phaseIcons={R32:'⚔️',Octavos:'🔟',Cuartos:'🎯',Semis:'🔥',Final:'🏆'};
+  const phaseLabels={R32:'Ronda de 32',Octavos:'Octavos',Cuartos:'Cuartos',Semis:'Semis',Final:'Final'};
 
+  // Get matches per phase, fallback to R32_DEFS for R32 if empty
   function getPhaseMatches(ph){
     const ms=S.matches.filter(m=>m.phase===ph);
-    if(ph==='R32'){
-      // SIEMPRE usar R32_DEFS para emparejamientos correctos — BD puede tener datos viejos
-      return R32_DEFS.map(r=>{
-        const dbM=ms.find(m=>String(m.match_number)===String(r.num));
-        return{id:dbM?.id||('r'+r.num),home:r.h,away:r.a,
-          status:dbM?.status||'SCHEDULED',home_score:dbM?.home_score??null,
-          away_score:dbM?.away_score??null,match_date:dbM?.match_date||null,
-          stadium:r.venue,minute:dbM?.minute||null,_label:r.num,_date:r.date};
-      });
-    }
+    if(ph==='R32'&&!ms.length) return R32_DEFS.map(r=>({id:'r'+r.num,home:r.h,away:r.a,status:'SCHEDULED',home_score:null,away_score:null,match_date:null,stadium:r.venue,_label:r.num,_date:r.date}));
     return ms;
   }
 
-  function matchCard(m){
+  function matchBox(m){
     const fin=m.status==='FINISHED',live=m.status==='IN_PLAY';
+    const wH=fin&&m.home_score>m.away_score,wA=fin&&m.away_score>m.home_score;
     const tbdH=isTBD(m.home),tbdA=isTBD(m.away);
-    const labelH=tbdH?fmtTBD(m.home):m.home;
-    const labelA=tbdA?fmtTBD(m.away):m.away;
-    const wH=fin&&m.home_score>m.away_score;
-    const wA=fin&&m.away_score>m.home_score;
-    const scoreH=fin||live?(m.home_score??0):'';
-    const scoreA=fin||live?(m.away_score??0):'';
-    const border=live?'var(--red)':fin?'rgba(46,204,113,.5)':'var(--bor)';
-    const dateStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})+'h':(m._date||'Fecha TBD');
-    const matchNum=m._label?`P${m._label}`:'';
-
-    return`<div style="background:var(--card);border:1px solid ${border};border-radius:10px;overflow:hidden;transition:border-color .2s;${live?'animation:lb 2s infinite':''}">
-      <div style="background:var(--sur);padding:3px 8px;display:flex;justify-content:space-between;align-items:center;font-size:9px;color:var(--mut)">
-        <span style="font-weight:700;color:var(--acc)">${matchNum}</span>
-        <span style="flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px">${dateStr}</span>
-        <span style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px">${m.stadium||''}</span>
+    const scoreH=fin||live?(m.home_score??0):tbdH?'':'—';
+    const scoreA=fin||live?(m.away_score??0):tbdA?'':'—';
+    const border=fin?'rgba(46,204,113,.35)':live?'rgba(231,76,60,.6)':'#2a2a3f';
+    const d=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):(m._date||'');
+    return`<div style="background:#1a1a26;border:1px solid ${border};border-radius:8px;width:134px;font-size:10px;overflow:hidden;flex-shrink:0">
+      <div style="background:#12121a;padding:2px 6px;font-size:9px;color:#6b6b88;display:flex;justify-content:space-between">
+        <span>${d}</span><span style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap;max-width:70px">${m.stadium||''}</span>
       </div>
-      <div style="padding:7px 10px;display:flex;align-items:center;gap:6px;background:${wH?'rgba(245,200,66,.07)':'transparent'}">
-        <span style="flex:1;font-size:12px;font-weight:${wH?'700':'500'};color:${tbdH?'var(--mut)':'var(--txt)'};font-style:${tbdH?'italic':'normal'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelH}</span>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;min-width:22px;text-align:center;color:${wH?'var(--gold)':fin?'var(--txt)':'var(--mut)'}">${scoreH}</span>
+      <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wH?'rgba(245,200,66,.07)':'transparent'}">
+        <span style="color:${tbdH?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdH?'italic':'normal'}">${m.home}</span>
+        <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wH?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreH}</span>
       </div>
-      <div style="height:1px;background:var(--bor)"></div>
-      <div style="padding:7px 10px;display:flex;align-items:center;gap:6px;background:${wA?'rgba(245,200,66,.07)':'transparent'}">
-        <span style="flex:1;font-size:12px;font-weight:${wA?'700':'500'};color:${tbdA?'var(--mut)':'var(--txt)'};font-style:${tbdA?'italic':'normal'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelA}</span>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;min-width:22px;text-align:center;color:${wA?'var(--gold)':fin?'var(--txt)':'var(--mut)'}">${scoreA}</span>
+      <div style="height:1px;background:#2a2a3f"></div>
+      <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wA?'rgba(245,200,66,.07)':'transparent'}">
+        <span style="color:${tbdA?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdA?'italic':'normal'}">${m.away}</span>
+        <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wA?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreA}</span>
       </div>
-      ${live?`<div style="background:var(--red);color:#fff;font-size:8px;font-weight:700;text-align:center;padding:2px;animation:pu 1s infinite">🔴 EN VIVO${m.minute?' — '+m.minute+"'":''}  </div>`:''}
+      ${live?'<div style="background:var(--red);color:#fff;font-size:8px;font-weight:700;text-align:center;padding:2px">🔴 EN VIVO</div>':''}
     </div>`;
   }
 
-  let html='';
-  phases.forEach(ph=>{
-    const ms=getPhaseMatches(ph);
-    if(!ms.length)return;
-    const finCount=ms.filter(m=>m.status==='FINISHED').length;
-    const liveCount=ms.filter(m=>m.status==='IN_PLAY').length;
-    const statusStr=finCount===ms.length?`<span style="color:var(--green);font-size:10px">✓ Completada</span>`:liveCount?`<span style="color:var(--red);font-size:10px;animation:pu 1s infinite">🔴 En curso (${liveCount})</span>`:`<span style="color:var(--mut);font-size:10px">${finCount}/${ms.length} jugados</span>`;
+  const CARD_H=68; // match box height in px
+  const R32_H=CARD_H+4; // per-match slot height
 
-    html+=`<div style="margin-bottom:18px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:var(--acc)">${phaseIcons[ph]} ${phaseLabels[ph]}</span>
-        <div style="flex:1;height:1px;background:var(--bor)"></div>
-        ${statusStr}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:7px">
-        ${ms.map(m=>matchCard(m)).join('')}
-      </div>
-    </div>`;
+  // Build the bracket as a scrollable horizontal flex layout
+  let html='<div style="overflow-x:auto;padding-bottom:8px"><div style="display:flex;align-items:flex-start;gap:0;min-width:800px">';
+
+  phases.forEach((ph,pi)=>{
+    const ms=getPhaseMatches(ph);
+    const spacing=Math.pow(2,pi); // vertical spacing multiplier per round
+    const slotH=R32_H*spacing+(spacing-1)*4; // total height of one "slot" this round
+
+    html+=`<div style="display:flex;flex-direction:column">`;
+    html+=`<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b6b88;text-align:center;padding:3px 6px 6px">${phaseLabels[ph]}</div>`;
+    html+=`<div style="display:flex;flex-direction:column">`;
+
+    // Pairs: space between pairs = spacing matches height
+    const pairGap=pi>0?(slotH-CARD_H*2-4)*1:0;
+
+    ms.forEach((m,mi)=>{
+      if(pi>0&&mi>0&&mi%(1)===0){
+        // Add spacer between each match after the first
+        const spacerH=slotH-CARD_H-4;
+        html+=`<div style="height:${spacerH}px"></div>`;
+      }
+      html+=`<div style="display:flex;align-items:center">${matchBox(m)}`;
+      // Connector line to right
+      if(pi<phases.length-1){
+        const midH=CARD_H/2;
+        // If even match, line goes right and up to middle of pair
+        // If odd match, line goes right and down to middle of pair
+        const isEven=mi%2===0;
+        const pairMidOffset=slotH/2-CARD_H/2+CARD_H/2;
+        const lineH=slotH;
+        const goUp=isEven;
+        const connH=slotH;
+        const top=isEven?CARD_H/2:-(slotH-CARD_H-4+CARD_H/2);
+        html+=`<svg width="24" height="${connH}" style="overflow:visible;flex-shrink:0" fill="none">
+          <line x1="0" y1="${CARD_H/2}" x2="12" y2="${CARD_H/2}" stroke="#2a2a3f" stroke-width="1"/>
+          ${isEven?
+            `<line x1="12" y1="${CARD_H/2}" x2="12" y2="${connH-4}" stroke="#2a2a3f" stroke-width="1"/>`:
+            `<line x1="12" y1="${CARD_H/2}" x2="12" y2="${4}" stroke="#2a2a3f" stroke-width="1"/>`
+          }
+          ${isEven?
+            `<line x1="12" y1="${connH-4}" x2="24" y2="${connH-4}" stroke="#2a2a3f" stroke-width="1"/>`:
+            `<line x1="12" y1="${4}" x2="24" y2="${4}" stroke="#2a2a3f" stroke-width="1"/>`
+          }
+        </svg>`;
+      }
+      html+='</div>';
+    });
+
+    html+='</div></div>';
+    // Gap between rounds
+    if(pi<phases.length-1) html+='<div style="width:0"></div>';
   });
 
-  // Campeón
-  const champ=S.tr?.champion;
-  html+=`<div style="margin-top:8px;text-align:center">
-    <div style="display:inline-block;background:rgba(245,200,66,.1);border:1px solid var(--gold);border-radius:14px;padding:14px 24px;text-align:center">
-      <div style="font-size:32px;margin-bottom:4px">🏆</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--gold)">CAMPEÓN MUNDIAL 2026</div>
-      ${champ?`<div style="font-size:14px;font-weight:700;margin-top:4px">${champ}</div>`:`<div style="font-size:11px;color:var(--mut);margin-top:4px">Por determinar</div>`}
+  // Trophy
+  html+=`<div style="display:flex;align-items:center;padding-left:8px;align-self:center;margin-top:${R32_H*8+4}px">
+    <div style="background:rgba(245,200,66,.1);border:1px solid #f5c842;border-radius:10px;padding:10px 12px;text-align:center;width:80px">
+      <div style="font-size:22px;margin-bottom:3px">🏆</div>
+      <div style="font-size:9px;font-weight:700;color:#f5c842;letter-spacing:1px">CAMPEÓN</div>
     </div>
   </div>`;
 
+  html+='</div></div>';
   el.innerHTML=html;
 }
 
@@ -1811,35 +1772,63 @@ function renderFantasyForm(){
   const f=S.fantasy,locked=f?.locked,unl=f?.unlocked_by_admin;
   const area=document.getElementById('fantasyForm');if(!area)return;
   if(locked&&!unl){
-    area.innerHTML=`<div class="pf"><label>🌍 Tu equipo</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.team||'—'}</span></div>
-    <div class="pf"><label>⭐ Tu jugador</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.player_number?'#'+f.player_number+' ':''} ${f.player||'—'}</span></div>
+    area.innerHTML=`
+    <div class="pf"><label>🌍 Tu equipo</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.team||'—'}</span></div>
+    <div class="pf"><label>⭐ Tu jugador</label>
+      <span style="font-size:13px;font-weight:700;color:var(--gold)">${f.player_number?'#'+f.player_number+' ':''}${f.player||'—'}</span>
+      ${f.player_team&&f.player_team!==f.team?`<span style="font-size:10px;color:var(--mut);margin-left:6px">(${f.player_team})</span>`:''}
+    </div>
     <div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee</div>`;
   }else{
     const teamOpts=TEAMS.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');
     const posLabels={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
-    // Player team can be different from fantasy team
-    const playerTeam=f?._playerTeam||(f?.team)||'';
-    const playerTeamOpts=TEAMS.map(t=>`<option value="${t}"${playerTeam===t?' selected':''}>${t}</option>`).join('');
-    const inlineSquad=playerTeam?SQUADS[playerTeam]||[]:[];
+    // Load from DB cache (loaded by onTeamChange) or inline SQUADS fallback
+    const dbSquad=f?.team&&S._players?.[f.team];
+    const inlineSquad=f?.team?SQUADS[f.team]||[]:[];
+    const rawSquad=dbSquad||inlineSquad.map(p=>({name:p.name,number:p.n,position:p.pos}));
     let playerOpts='<option value="">— Elige jugador —</option>';
     let lastPos='';
-    inlineSquad.forEach(p=>{
-      const pos=p.pos;
+    rawSquad.forEach(p=>{
+      const pos=p.position||p.pos;
       if(pos!==lastPos){playerOpts+=`<optgroup label="${posLabels[pos]||pos}">`;lastPos=pos;}
+      const num=p.number||p.n||0;
       const selected=(f?.player===p.name)?' selected':'';
-      playerOpts+=`<option value="${p.name}" data-num="${p.n}"${selected}>#${p.n} ${p.name}</option>`;
+      playerOpts+=`<option value="${p.name}" data-num="${num}"${selected}>#${num} ${p.name}</option>`;
+    });
+    // Player search from DB (fallback to inline SQUADS)
+    const posLabelsAll={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
+    const playerFilterTeam=f?.playerTeamFilter||'';
+    // Use DB players if available, else inline SQUADS
+    const dbAll=S._allPlayers||[];
+    const inlineAll=Object.entries(SQUADS).flatMap(([team,ps])=>ps.map(p=>({name:p.name,number:p.n,position:p.pos,team})));
+    const allPlayersFlat=dbAll.length?dbAll.map(p=>({name:p.name,number:p.number,position:p.position,team:p.team})):inlineAll;
+    const filteredPlayers=playerFilterTeam?allPlayersFlat.filter(p=>p.team===playerFilterTeam):allPlayersFlat;
+    let allPlayerOpts='<option value="">— Elige jugador —</option>';
+    let lastPosAll='';
+    filteredPlayers.forEach(p=>{
+      const pos=p.position||p.pos;
+      if(pos!==lastPosAll){allPlayerOpts+=`<optgroup label="${posLabelsAll[pos]||pos}">`;lastPosAll=pos;}
+      const num=p.number||p.n||0;
+      const sel=(f?.player===p.name&&(!playerFilterTeam||p.team===playerFilterTeam))?' selected':'';
+      allPlayerOpts+=`<option value="${p.name}" data-num="${num}" data-team="${p.team}"${sel}>${num?'#'+num+' ':''}${p.name} (${p.team})</option>`;
     });
     area.innerHTML=`
-    <div class="pf"><label>🌍 Tu equipo (fantasy)</label>
-      <select id="fTeam" onchange="onTeamChange(this.value)"><option value="">— Elige —</option>${teamOpts}</select>
+    <div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:var(--mut)">
+      <strong style="color:var(--txt)">⚽ Tu equipo</strong> — suma puntos por victorias/empates<br>
+      <strong style="color:var(--txt)">⭐ Tu jugador</strong> — puede ser de <em>cualquier selección</em>, gana puntos por goles y asistencias
     </div>
-    <div class="pf" style="font-size:10px;color:var(--mut);padding:0 0 4px 125px">⚡ El jugador puede ser de cualquier equipo</div>
-    <div class="pf"><label>🏳️ Equipo del jugador</label>
-      <select id="fPlayerTeam" onchange="onPlayerTeamChange(this.value)"><option value="">— Elige equipo —</option>${playerTeamOpts}</select>
+    <div class="pf"><label>🌍 Tu equipo</label>
+      <select id="fTeam"><option value="">— Elige —</option>${teamOpts}</select>
     </div>
-    ${playerTeam?`<div class="pf"><label>⭐ Tu jugador</label>
-      <select id="fPlayer"><option value="">— Elige jugador —</option>${playerOpts}</select>
-    </div>`:'<div class="pf" style="color:var(--mut);font-size:12px">← Elige primero el equipo del jugador</div>'}
+    <div class="pf"><label>🔍 Filtrar jugadores por país (opcional)</label>
+      <select onchange="filterFantasyPlayers(this.value)">
+        <option value="">— Todos los países —</option>
+        ${TEAMS.map(t=>`<option value="${t}"${playerFilterTeam===t?' selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="pf"><label>⭐ Tu jugador</label>
+      <select id="fPlayer">${allPlayerOpts}</select>
+    </div>
     ${unl?'<div class="unlockb">🔓 Desbloqueado por admin</div>':''}
     <button class="btn g" onclick="saveFantasy()" style="margin-top:9px">${locked&&unl?'🔓 Guardar nueva elección':'🔒 Guardar y bloquear'}</button>
     ${!locked?'<p style="font-size:10px;color:var(--mut);margin-top:5px">⚠️ Una vez guardado no podrás cambiarlo sin el admin</p>':''}`;
@@ -1851,20 +1840,36 @@ async function onTeamChange(team){
   else S.fantasy={team,player:'',locked:false};
   renderFantasyForm();
 }
-async function onPlayerTeamChange(playerTeam){
-  // Player can be from any team, separate from the fantasy team chosen
-  if(S.fantasy)S.fantasy={...S.fantasy,_playerTeam:playerTeam,player:'',player_number:0};
-  else S.fantasy={_playerTeam:playerTeam,player:'',locked:false};
+function filterFantasyPlayers(team){
+  if(S.fantasy)S.fantasy={...S.fantasy,playerTeamFilter:team};
+  else S.fantasy={playerTeamFilter:team};
   renderFantasyForm();
+}
+async function loadPlayersFromDB(team){
+  if(S._players[team])return S._players[team];
+  let q=sb.from('players').select('*').eq('team',team).order('position').order('number');
+  if(S.tournamentId)q=q.eq('tournament_id',S.tournamentId);
+  const{data}=await q;
+  S._players[team]=data||[];
+  return S._players[team];
+}
+async function loadAllPlayersFromDB(){
+  if(S._allPlayers)return S._allPlayers;
+  let q=sb.from('players').select('*').order('team').order('position').order('number');
+  if(S.tournamentId)q=q.eq('tournament_id',S.tournamentId);
+  const{data}=await q;
+  S._allPlayers=data||[];
+  return S._allPlayers;
 }
 async function saveFantasy(){
   const team=document.getElementById('fTeam')?.value;
   const playerSel=document.getElementById('fPlayer');
   const player=playerSel?.value.trim();
-  if(!team||!player){toast('Elige equipo fantasy y jugador','err');return;}
-  const playerNum=parseInt(playerSel?.selectedOptions?.[0]?.dataset?.num)||0;
-  const playerTeam=document.getElementById('fPlayerTeam')?.value||team;
-  const{error}=await sb.from('fantasy').upsert({user_id:S.userId,group_id:S.groupId,team,player,player_number:playerNum,locked:true,unlocked_by_admin:false,player_goals:S.fantasy?.player_goals||0,player_assists:S.fantasy?.player_assists||0,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
+  if(!team||!player){toast('Elige equipo y jugador','err');return;}
+  const selOpt=playerSel?.selectedOptions?.[0];
+  const playerNum=parseInt(selOpt?.dataset?.num)||0;
+  const playerTeam=selOpt?.dataset?.team||team||'';
+  const{error}=await sb.from('fantasy').upsert({user_id:S.userId,group_id:S.groupId,team,player,player_number:playerNum,player_team:playerTeam,locked:true,unlocked_by_admin:false,player_goals:S.fantasy?.player_goals||0,player_assists:S.fantasy?.player_assists||0,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
   if(error){toast('Error: '+error.message,'err');return;}
   await loadFantasy();await loadAllFantasy();
   toast('✓ Bloqueado: #'+playerNum+' '+player+' ('+team+') 🔒');renderFantasyForm();
@@ -1879,21 +1884,24 @@ function calcFPts(uid){
   const f=S.allFantasy.find(x=>x.user_id===uid);if(!f?.team)return 0;
   let pts=0;const tr=S.tr||{};
   const qts=(tr.quarter_teams||[]).map(s=>norm(s)),smis=(tr.semi_teams||[]).map(s=>norm(s));
+  
+  // Puntos del EQUIPO — calculados automáticamente desde matches
   S.matches.forEach(m=>{
     if(m.status!=='FINISHED')return;
     const isH=norm(m.home)===norm(f.team),isA=norm(m.away)===norm(f.team);
     if(!isH&&!isA)return;
-    const rh=parseInt(m.home_score),ra=parseInt(m.away_score);if(isNaN(rh)||isNaN(ra))return;
-    // +1 por ganar el partido (nuevo)
-    if((isH&&rh>ra)||(isA&&ra>rh))pts+=1;
-    // (empate no da pts por "ganar partido", solo los de fase)
-    if(rh===ra)pts+=0; // empate no da 1pt por partido aquí (eso es fase de grupos abajo)
+    const rh=parseInt(m.home_score),ra=parseInt(m.away_score);
+    if(isNaN(rh)||isNaN(ra))return;
+    if(rh===ra)pts+=1;                                        // empate = +1
+    else if((isH&&rh>ra)||(isA&&ra>rh))pts+=3;               // victoria = +3
   });
-  // Pts por clasificación fase (ya incluyen win/draw de grupo)
+  
+  // Puntos por fase (desde tournament_results o calculado de matches)
   if(qts.includes(norm(f.team)))pts+=6;
   if(smis.includes(norm(f.team)))pts+=10;
   if(tr.champion&&norm(tr.champion)===norm(f.team))pts+=20;
-  // Jugador
+  
+  // Puntos del JUGADOR — admin introduce goles/asistencias
   pts+=(f.player_goals||0)*5;
   pts+=(f.player_assists||0)*3;
   if(tr.top_scorer&&norm(tr.top_scorer)===norm(f.player))pts+=15;
@@ -1959,51 +1967,18 @@ function copyLink(){navigator.clipboard?.writeText(getLink()).then(()=>{toast('�
 
 // ADMIN
 let adminAuthed=false;
-function renderAdmin(){const la=document.getElementById('adminLogin'),ct=document.getElementById('adminContent');if(adminAuthed){la.innerHTML=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap"><span style="color:var(--green);font-size:11px;font-weight:600">✓ Admin activo</span><button class="btn r sm" onclick="logoutAdmin()">Salir</button></div>`;ct.style.display='';renderAdminMatches();renderAdminGoals();renderAdminUnlocks();renderAdminFPUnlocks();loadTRForm();}else{la.innerHTML=`<div class="ab"><h3>🔐 Acceso Admin</h3><p style="color:var(--mut);font-size:11px;margin-bottom:9px">Solo el creador del grupo.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><input type="password" id="aPF" maxlength="8" placeholder="PIN" style="width:82px;background:var(--bg);border:1px solid var(--bor);border-radius:7px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:14px;padding:6px 8px;letter-spacing:3px;text-align:center" onkeydown="if(event.key==='Enter')loginAdmin()"><button class="btn g" onclick="loginAdmin()">Entrar</button></div></div>`;ct.style.display='none';}}
+function renderAdmin(){const la=document.getElementById('adminLogin'),ct=document.getElementById('adminContent');if(adminAuthed){la.innerHTML=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap"><span style="color:var(--green);font-size:11px;font-weight:600">✓ Admin activo</span><button class="btn r sm" onclick="logoutAdmin()">Salir</button></div>`;ct.style.display='';renderAdminMatches();renderAdminGoals();renderAdminUnlocks();loadTRForm();}else{la.innerHTML=`<div class="ab"><h3>🔐 Acceso Admin</h3><p style="color:var(--mut);font-size:11px;margin-bottom:9px">Solo el creador del grupo.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><input type="password" id="aPF" maxlength="8" placeholder="PIN" style="width:82px;background:var(--bg);border:1px solid var(--bor);border-radius:7px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:14px;padding:6px 8px;letter-spacing:3px;text-align:center" onkeydown="if(event.key==='Enter')loginAdmin()"><button class="btn g" onclick="loginAdmin()">Entrar</button></div></div>`;ct.style.display='none';}}
 function loginAdmin(){const p=document.getElementById('aPF').value;if(p===S.adminPin){adminAuthed=true;renderAdmin();toast('✓ Admin autenticado');}else{toast('PIN incorrecto ❌','err');document.getElementById('aPF').value='';}}
 function logoutAdmin(){adminAuthed=false;renderAdmin();}
 async function changePin(){const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value;if(o!==S.adminPin){toast('PIN actual incorrecto','err');return;}if(n.length<4){toast('Mínimo 4 dígitos','err');return;}const{error}=await sb.from('groups').update({admin_pin:n}).eq('id',S.groupId);if(error){toast('Error','err');return;}S.adminPin=n;saveSess();document.getElementById('oldPin').value='';document.getElementById('newPin').value='';toast('✓ PIN cambiado');}
 function renderAdminUnlocks(){const el=document.getElementById('adminUnlocks');if(!el)return;const locked=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.locked);if(!locked.length){el.innerHTML='<p style="color:var(--mut);font-size:11px">Ningún participante tiene selección bloqueada.</p>';return;}el.innerHTML=locked.map(u=>{const f=S.allFantasy.find(x=>x.user_id===u.id);return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap;background:var(--bg);border-radius:7px;padding:8px"><div style="flex:1"><div style="font-weight:600;font-size:11px">${u.username}</div><div style="font-size:10px;color:var(--mut)">${f?.team||'?'} · ${f?.player||'?'}</div></div>${f?.unlocked_by_admin?`<span class="unlockb" style="font-size:10px">🔓</span><button class="btn r sm" onclick="lockU('${u.id}')">Bloquear</button>`:`<button class="btn p sm" onclick="unlockU('${u.id}')">🔓 Desbloquear</button>`}</div>`;}).join('');}
 async function unlockU(uid){await sb.from('fantasy').update({unlocked_by_admin:true}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFantasy();renderAdminUnlocks();toast('✓ Desbloqueado');}
 async function lockU(uid){await sb.from('fantasy').update({unlocked_by_admin:false}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFantasy();renderAdminUnlocks();toast('🔒 Bloqueado de nuevo');}
-async function unlockFP(uid){await sb.from('final_predictions').update({unlocked_by_admin:true}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFinalPreds();renderAdminFPUnlocks();toast('✓ Predicciones torneo desbloqueadas');}
-async function lockFP(uid){await sb.from('final_predictions').update({unlocked_by_admin:false}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFinalPreds();renderAdminFPUnlocks();toast('🔒 Predicciones torneo bloqueadas de nuevo');}
-function renderAdminFPUnlocks(){
-  const el=document.getElementById('adminFPUnlocks');if(!el)return;
-  const locked=S.allUsers.filter(u=>S.allFinalPreds.find(f=>f.user_id===u.id)?.locked);
-  if(!locked.length){el.innerHTML='<p style="color:var(--mut);font-size:11px">Ningún participante tiene predicciones bloqueadas aún.</p>';return;}
-  el.innerHTML=locked.map(u=>{
-    const fp=S.allFinalPreds.find(x=>x.user_id===u.id);
-    return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap;background:var(--bg);border-radius:7px;padding:8px">
-      <div style="flex:1"><div style="font-weight:600;font-size:11px">${u.username}</div>
-      <div style="font-size:10px;color:var(--mut)">${fp?.champion||'?'} · ${fp?.top_scorer||'?'}</div></div>
-      ${fp?.unlocked_by_admin?
-        `<span class="unlockb" style="font-size:10px">🔓</span><button class="btn r sm" onclick="lockFP('${u.id}')">Bloquear</button>`:
-        `<button class="btn p sm" onclick="unlockFP('${u.id}')">🔓 Desbloquear</button>`
-      }
-    </div>`;
-  }).join('');
-}
-function renderAdminMatches(){const ct=document.getElementById('adminMatches');if(!ct)return;ct.innerHTML='';let lph='';S.matches.forEach(m=>{if(m.phase!==lph){lph=m.phase;const lb=document.createElement('div');lb.className='day-lbl';lb.style.marginTop='9px';lb.textContent='── '+m.phase+' ──';ct.appendChild(lb);}const d=document.createElement('div');d.className='am';const tbd=isTBD(m.home)||isTBD(m.away);const tStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';d.innerHTML=`<h4>${m.home} <span style="color:var(--mut)">vs</span> ${m.away} <span style="color:var(--mut);font-size:9px">${tStr}</span>${m.status==='FINISHED'?'<span style="color:var(--green);font-size:9px"> ✓</span>':''}${m.status==='IN_PLAY'?'<span style="color:var(--red);font-size:9px"> 🔴</span>':''}</h4>${tbd?'<p style="font-size:10px;color:var(--mut)">⏳ Equipos pendientes</p>':`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><div class="si"><input type="number" min="0" max="30" id="rh-${m.id}" value="${m.home_score??''}" placeholder="0"><span>—</span><input type="number" min="0" max="30" id="ra-${m.id}" value="${m.away_score??''}" placeholder="0"></div><button class="btn p sm" onclick="saveRes('${m.id}')">✓</button>${m.status==='FINISHED'?`<button class="btn r sm" onclick="unsetRes('${m.id}')">✗</button>`:''}</div>`}`;ct.appendChild(d);});}
+function renderAdminMatches(){const ct=document.getElementById('adminMatches');if(!ct)return;ct.innerHTML='';let lph='';S.matches.forEach(m=>{if(m.phase!==lph){lph=m.phase;const lb=document.createElement('div');lb.className='day-lbl';lb.style.marginTop='9px';lb.textContent='── '+m.phase+' ──';ct.appendChild(lb);}const d=document.createElement('div');d.className='am';const tbd=isTBD(m.home)||isTBD(m.away);const tStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short',timeZone:'Europe/Madrid'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}):'';d.innerHTML=`<h4>${m.home} <span style="color:var(--mut)">vs</span> ${m.away} <span style="color:var(--mut);font-size:9px">${tStr}</span>${m.status==='FINISHED'?'<span style="color:var(--green);font-size:9px"> ✓</span>':''}${m.status==='IN_PLAY'?'<span style="color:var(--red);font-size:9px"> 🔴</span>':''}</h4>${tbd?'<p style="font-size:10px;color:var(--mut)">⏳ Equipos pendientes</p>':`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><div class="si"><input type="number" min="0" max="30" id="rh-${m.id}" value="${m.home_score??''}" placeholder="0"><span>—</span><input type="number" min="0" max="30" id="ra-${m.id}" value="${m.away_score??''}" placeholder="0"></div><button class="btn p sm" onclick="saveRes('${m.id}')">✓</button>${m.status==='FINISHED'?`<button class="btn r sm" onclick="unsetRes('${m.id}')">✗</button>`:''}</div>`}`;ct.appendChild(d);});}
 async function saveRes(mid){const h=parseInt(document.getElementById('rh-'+mid)?.value),a=parseInt(document.getElementById('ra-'+mid)?.value);if(isNaN(h)||isNaN(a)){toast('Introduce ambos goles','err');return;}const{error}=await sb.from('matches').update({home_score:h,away_score:a,status:'FINISHED',updated_at:new Date().toISOString()}).eq('id',mid);if(error){toast('Error','err');return;}toast('✓ Resultado guardado');S._allPreds=null;await loadMatches();renderAdminMatches();renderAll();}
 async function unsetRes(mid){await sb.from('matches').update({home_score:null,away_score:null,status:'SCHEDULED',updated_at:new Date().toISOString()}).eq('id',mid);await loadMatches();renderAdminMatches();renderAll();toast('Resultado eliminado','info');}
 async function saveTR(){const{error}=await sb.from('tournament_results').upsert({group_id:S.groupId,champion:document.getElementById('tr-champ').value.trim(),runner_up:document.getElementById('tr-runner').value.trim(),top_scorer:document.getElementById('tr-scorer').value.trim(),mvp:document.getElementById('tr-mvp').value.trim(),quarter_teams:document.getElementById('tr-quarters').value?document.getElementById('tr-quarters').value.split(',').map(s=>s.trim()):[],semi_teams:document.getElementById('tr-semis').value?document.getElementById('tr-semis').value.split(',').map(s=>s.trim()):[],updated_at:new Date().toISOString()},{onConflict:'group_id'});if(error){toast('Error','err');return;}await loadTR();S._allPreds=null;renderRk(S.rkMode);renderFantasyRanking();toast('¡Datos del torneo guardados! 🏆');}
-function loadTRForm(){
-  const tr=S.tr||{};
-  // Populate team selects
-  const teamOpts=TEAMS.map(t=>`<option value="${t}">${t}</option>`).join('');
-  ['tr-champ','tr-runner'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">—</option>'+teamOpts;el.dataset.filled='1';}});
-  // Populate player selects
-  let allPlayers=[];Object.entries(SQUADS).forEach(([team,squad])=>{squad.forEach(p=>{allPlayers.push({name:p.name,team});});});
-  allPlayers.sort((a,b)=>a.name.localeCompare(b.name));
-  const playerOpts=allPlayers.map(p=>`<option value="${p.name}">${p.name} (${p.team.replace(/^[^\s]+ /,'')})</option>`).join('');
-  ['tr-scorer','tr-mvp'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">—</option>'+playerOpts;el.dataset.filled='1';}});
-  // Set values
-  const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v){el.value=v;if(!el.value){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v;}}};
-  setV('tr-champ',tr.champion);setV('tr-runner',tr.runner_up);setV('tr-scorer',tr.top_scorer);setV('tr-mvp',tr.mvp);
-  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
-  s('tr-quarters',(tr.quarter_teams||[]).join(','));s('tr-semis',(tr.semi_teams||[]).join(','));
-}
+function loadTRForm(){const tr=S.tr||{};const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('tr-champ',tr.champion);s('tr-runner',tr.runner_up);s('tr-scorer',tr.top_scorer);s('tr-mvp',tr.mvp);s('tr-quarters',(tr.quarter_teams||[]).join(','));s('tr-semis',(tr.semi_teams||[]).join(','));}
 function renderAdminGoals(){
   const el=document.getElementById('adminGoals');if(!el)return;
   const us=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.player);
@@ -2042,7 +2017,15 @@ async function chgGoal(uid,type,d){
 }
 
 
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  if(id==='dashboard')renderDashboard();
+  if(id==='auth'){
+    document.getElementById('auth-step-email').style.display='';
+    document.getElementById('auth-step-otp').style.display='none';
+  }
+}
 function setSS(t,msg){document.getElementById('sdot').className='sdot '+(t==='ok'?'ok':t==='err'?'err':'sync');document.getElementById('sstatus').textContent=msg;}
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show');}
 function hideErr(id){document.getElementById(id).classList.remove('show');}
@@ -2052,188 +2035,127 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 
 (function(){const p=new URLSearchParams(window.location.search);const c=p.get('code');if(c){switchTab('join');const el=document.getElementById('join-code');if(el)el.value=c.toUpperCase();}})();
 
-if(loadSess()){initApp();}else{showScreen('auth');}
-</script>
 
-<script>
-if('serviceWorker'in navigator){
-  // Intentamos registrar sw.js, pero si falla (GitHub Pages sin sw.js) lo creamos inline
-  window.addEventListener('load',()=>{
-    // Primero intentar SW externo
-    navigator.serviceWorker.register('sw.js').catch(()=>{
-      // Si no existe sw.js, crear uno inline con blob URL
-      const swCode=`
-self.addEventListener('install',e=>{self.skipWaiting();});
-self.addEventListener('activate',e=>{e.waitUntil(clients.claim());});
-self.addEventListener('fetch',e=>{
-  // Solo cachear recursos estáticos, pasar resto
-  if(e.request.method!=='GET')return;
-  const url=new URL(e.request.url);
-  if(url.origin!==self.location.origin)return;
-  e.respondWith(
-    caches.open('mundial2026-v1').then(cache=>
-      cache.match(e.request).then(cached=>
-        cached||fetch(e.request).then(resp=>{
-          if(resp.ok)cache.put(e.request,resp.clone());
-          return resp;
-        })
-      )
-    )
-  );
-});`;
-      const blob=new Blob([swCode],{type:'application/javascript'});
-      const swUrl=URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl).catch(()=>{});
-    });
-    navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='RELOAD')window.location.reload();});
-  });
+// ── EMAIL OTP AUTH ────────────────────────────────────────────────
+async function sendOTP(){
+  const email=document.getElementById('auth-email').value.trim().toLowerCase();
+  if(!email||!email.includes('@')){showErr('err-email','Introduce un email válido');return;}
+  hideErr('err-email');
+  const btn=event.target;btn.disabled=true;btn.textContent='Enviando...';
+  const{error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  btn.disabled=false;btn.textContent='Continuar →';
+  if(error){showErr('err-email','Error: '+error.message);return;}
+  document.getElementById('auth-email-shown').textContent=email;
+  document.getElementById('auth-step-email').style.display='none';
+  document.getElementById('auth-step-otp').style.display='';
+  setTimeout(()=>document.getElementById('auth-otp')?.focus(),100);
 }
-let deferredPrompt=null;
-const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-const isInStandaloneIOS=window.navigator.standalone===true;
-const isInstalledPWA=window.navigator.standalone||window.matchMedia('(display-mode:standalone)').matches;
-const isAndroid=/android/i.test(navigator.userAgent);
-const isSafariIOS=isIOS&&/safari/i.test(navigator.userAgent)&&!/chrome|crios|fxios/i.test(navigator.userAgent);
-const isChromeiOS=isIOS&&/crios/i.test(navigator.userAgent);
-
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();deferredPrompt=e;
-  if(!localStorage.getItem('installDismissed')&&!isInstalledPWA){
-    setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},2000);
-  }
-  // Ocultar botón de install de nav si Chrome Android lo soporta
-  const nb=document.getElementById('installNavBtn');if(nb)nb.style.display='';
-});
-window.addEventListener('appinstalled',()=>{
-  const b=document.getElementById('installBanner');if(b)b.classList.remove('show');
-  deferredPrompt=null;
-  const nb=document.getElementById('installNavBtn');if(nb)nb.style.display='none';
-  toast('✅ ¡App instalada! Ya puedes abrirla desde tu pantalla de inicio','info');
-});
-
-// Siempre mostrar el botón de nav (excepto si ya instalada)
-if(isInstalledPWA){
-  const nb=document.getElementById('installNavBtn');if(nb)nb.style.display='none';
+async function verifyOTP(){
+  const email=document.getElementById('auth-email').value.trim().toLowerCase();
+  const token=document.getElementById('auth-otp').value.trim();
+  if(token.length!==6){showErr('err-otp','El código debe tener 6 dígitos');return;}
+  hideErr('err-otp');
+  const btn=event.target;btn.disabled=true;btn.textContent='Verificando...';
+  const{data,error}=await sb.auth.verifyOtp({email,token,type:'email'});
+  btn.disabled=false;btn.textContent='Entrar →';
+  if(error){showErr('err-otp','Código incorrecto o expirado ❌');return;}
+  // onAuthStateChange will fire and handle the rest
+}
+function backToEmail(){
+  document.getElementById('auth-step-email').style.display='';
+  document.getElementById('auth-step-otp').style.display='none';
+  document.getElementById('auth-otp').value='';
+  hideErr('err-otp');
+}
+async function signOut(){
+  await sb.auth.signOut();
+  S.authUid=null;S.authEmail='';S.userGroups=[];
+  localStorage.removeItem('mw26s');
+  showScreen('auth');
 }
 
-// iOS: mostrar banner automáticamente
-if(isIOS&&!isInstalledPWA&&!localStorage.getItem('installDismissed')){
-  setTimeout(()=>{const b=document.getElementById('installBanner');if(b)b.classList.add('show');},2000);
+// ── DASHBOARD ─────────────────────────────────────────────────────
+function dashTab(tab){
+  document.getElementById('dash-tab-join').classList.toggle('active',tab==='join');
+  document.getElementById('dash-tab-create').classList.toggle('active',tab==='create');
+  document.getElementById('dash-form-join').style.display=tab==='join'?'':'none';
+  document.getElementById('dash-form-create').style.display=tab==='create'?'':'none';
 }
-
-function showInstallModal(){
-  // Detectar la plataforma y mostrar instrucciones específicas
-  const modal=document.getElementById('installModal');if(!modal)return;
-  const body=document.getElementById('installModalBody');
-  
-  if(isInstalledPWA){
-    body.innerHTML=`<div style="text-align:center;padding:16px">
-      <div style="font-size:48px;margin-bottom:8px">✅</div>
-      <div style="font-weight:700;color:var(--green);font-size:15px">¡Ya está instalada!</div>
-      <div style="color:var(--mut);font-size:12px;margin-top:6px">La app ya está en tu pantalla de inicio</div>
-    </div>`;
-  } else if(isChromeiOS){
-    body.innerHTML=`<div>
-      <div style="background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:10px;font-size:12px;color:var(--txt);margin-bottom:12px">
-        ⚠️ Estás usando <strong>Chrome en iPhone</strong>. Para instalar la app tienes que abrirla en <strong style="color:var(--gold)">Safari</strong>.
-      </div>
-      <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:12px">
-        <div style="margin-bottom:8px;display:flex;gap:8px;align-items:flex-start">
-          <span style="background:var(--acc);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">1</span>
-          <span>Copia esta URL: <strong style="color:var(--gold);word-break:break-all">${window.location.href}</strong></span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="background:var(--acc);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">2</span>
-          <span>Pégala en <strong>Safari</strong> y sigue los pasos de instalación</span>
-        </div>
-      </div>
-      <button class="btn g" style="width:100%;margin-top:10px" onclick="navigator.clipboard?.writeText(window.location.href).then(()=>toast('URL copiada — pégala en Safari 📋'))">📋 Copiar URL</button>
-    </div>`;
-  } else if(isIOS){
-    // Safari iOS
-    body.innerHTML=`<div>
-      <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--mut);margin-bottom:12px">
-        ✅ Estás en Safari — ¡puedes instalar la app ahora mismo!
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:12px">
-          <div style="background:var(--acc);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">1</div>
-          <div style="font-size:13px">Toca <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:18px">⬆️</span><br><span style="font-size:11px;color:var(--mut)">Botón central de la barra inferior</span></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:12px">
-          <div style="background:var(--acc);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">2</div>
-          <div style="font-size:13px">Desplázate y toca <strong style="color:var(--gold)">«Añadir a pantalla de inicio»</strong> <span style="font-size:16px">➕</span></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:12px">
-          <div style="background:var(--green);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">3</div>
-          <div style="font-size:13px">Toca <strong style="color:var(--gold)">«Añadir»</strong> — ¡Listo! 🎉<br><span style="font-size:11px;color:var(--mut)">La app aparecerá en tu inicio</span></div>
-        </div>
-      </div>
-    </div>`;
-  } else if(deferredPrompt){
-    // Android Chrome con prompt disponible — instalar directamente
-    document.getElementById('installModal').classList.remove('show');
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(r=>{deferredPrompt=null;if(r.outcome==='accepted')toast('✅ ¡Instalando app!');});
+function renderDashboard(){
+  const emailEl=document.getElementById('dash-email');
+  if(emailEl)emailEl.textContent=S.authEmail;
+  const el=document.getElementById('dash-groups');if(!el)return;
+  if(!S.userGroups.length){
+    el.innerHTML='<div class="empty"><div class="ic">🏆</div><p>Aún no estás en ningún grupo.<br>Crea uno o únete con un código.</p></div>';
     return;
-  } else if(isAndroid){
-    // Android sin prompt (puede que ya esté instalada o sea Samsung browser etc)
-    body.innerHTML=`<div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:13px">
-          <div style="margin-bottom:10px;font-weight:600;color:var(--gold)">En Chrome para Android:</div>
-          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
-            <span style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">1</span>
-            <span>Toca los <strong>3 puntos ⋮</strong> arriba a la derecha</span>
-          </div>
-          <div style="display:flex;gap:10px;align-items:flex-start">
-            <span style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">2</span>
-            <span>Toca <strong style="color:var(--gold)">«Añadir a pantalla de inicio»</strong> o <strong style="color:var(--gold)">«Instalar app»</strong></span>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  } else {
-    // Desktop
-    body.innerHTML=`<div>
-      <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:13px">
-        <div style="margin-bottom:8px">En <strong>Chrome</strong> / <strong>Edge</strong>:</div>
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">1</span>
-          <span>Haz clic en el icono <strong style="color:var(--gold)">⊕</strong> en la barra de dirección, o en el menú → <strong style="color:var(--gold)">«Instalar app»</strong></span>
-        </div>
-      </div>
-    </div>`;
   }
-  
-  modal.classList.add('show');
+  el.innerHTML=S.userGroups.map(g=>`
+    <div class="grp-card" onclick="enterGroup('${g.group_id}')">
+      <div class="gc-icon">🏆</div>
+      <div class="gc-info">
+        <div class="gc-name">${g.group_name}</div>
+        <div class="gc-meta">
+          <span class="gc-code">${g.group_code}</span>
+          <span>·</span>
+          <span>${g.username}</span>
+          ${g.is_admin?'<span class="admin-badge">ADMIN</span>':''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--mut)">→</div>
+      </div>
+    </div>`).join('');
+  // Auto-fill invite code from URL
+  const p=new URLSearchParams(window.location.search);
+  const c=p.get('code');
+  if(c){const el2=document.getElementById('dash-join-code');if(el2)el2.value=c.toUpperCase();}
 }
 
-function installPWA(){
-  if(isInstalledPWA){toast('✅ La app ya está instalada','info');return;}
-  if(deferredPrompt&&!isIOS){
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('installBanner')?.classList.remove('show');});
+// ── BOOT ──────────────────────────────────────────────────────
+(async()=>{
+  // Check if user is logged in via Supabase Auth
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user){
+    S.authUid=session.user.id;
+    S.authEmail=session.user.email;
+    await loadUserGroups();
+    if(loadSess()&&S.groupId){
+      await initApp();
+    }else{
+      showScreen('dashboard');
+    }
   }else{
-    showInstallModal();
+    showScreen('auth');
   }
-}
-function hideInstallModal(){document.getElementById('installModal')?.classList.remove('show');}
-function showIOSInstall(){showInstallModal();}
-function hideIOSInstall(){hideInstallModal();}
-function dismissInstall(){
-  document.getElementById('installBanner')?.classList.remove('show');
-  localStorage.setItem('installDismissed','1');
-}
+  // Listen for auth changes (OTP verification)
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user){
+      S.authUid=session.user.id;
+      S.authEmail=session.user.email;
+      await loadUserGroups();
+      showScreen('dashboard');
+    }else if(event==='SIGNED_OUT'){
+      S.authUid=null;S.authEmail='';S.userGroups=[];
+      showScreen('auth');
+    }
+  });
+})();
 </script>
-
-<!-- UNIVERSAL INSTALL MODAL -->
-<div class="mo" id="installModal">
-  <div class="md" style="max-width:380px">
-    <h3>📲 Instalar app Mundial 2026</h3>
-    <p>Añade la app a tu pantalla de inicio para acceder rápidamente</p>
-    <div id="installModalBody"><!-- filled by showInstallModal() --></div>
-    <button class="btn p" style="width:100%;margin-top:12px" onclick="hideInstallModal()">Cerrar</button>
+<!-- iOS INSTALL MODAL -->
+<div class="mo" id="iosModal">
+  <div class="md" style="max-width:340px">
+    <h3>📲 Instalar en iPhone</h3>
+    <p>Para instalar la app en iOS, sigue estos pasos:</p>
+    <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:12px;color:var(--txt);line-height:1.8">
+      <div style="margin-bottom:6px">1️⃣ Pulsa el botón <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:16px">⬆️</span> en la barra inferior de Safari</div>
+      <div style="margin-bottom:6px">2️⃣ Desplázate hacia abajo y pulsa <strong style="color:var(--gold)">Añadir a pantalla de inicio</strong></div>
+      <div>3️⃣ Pulsa <strong style="color:var(--gold)">Añadir</strong> — ¡y listo! 🎉</div>
+    </div>
+    <div style="margin-top:12px;text-align:center">
+      <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'><rect width='200' height='60' rx='8' fill='%231a1a26'/><text x='100' y='25' text-anchor='middle' fill='%236b6b88' font-size='10' font-family='sans-serif'>Safari → Compartir ⬆️ → Añadir a pantalla de inicio</text><text x='100' y='45' text-anchor='middle' fill='%23f5c842' font-size='11' font-family='sans-serif' font-weight='bold'>[ + Añadir a pantalla de inicio ]</text></svg>" style="width:100%;border-radius:6px;margin-bottom:10px">
+    </div>
+    <button class="btn g" style="width:100%" onclick="hideIOSInstall();localStorage.setItem('installDismissed','1')">Entendido ✓</button>
   </div>
 </div>
-</body></html>
+</body>
+</html>
