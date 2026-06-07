@@ -267,25 +267,27 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
       <div class="aerr" id="err-email"></div>
       <div class="field">
         <label>Tu email</label>
-        <input id="auth-email" type="email" placeholder="tucorreo@gmail.com" autocomplete="email" inputmode="email">
+        <input id="auth-email" type="email" placeholder="tucorreo@gmail.com" autocomplete="email" inputmode="email"
+          onkeydown="if(event.key==='Enter')sendMagicLink()">
       </div>
-      <button class="btn g" style="width:100%;margin-top:4px" onclick="sendOTP()">Continuar →</button>
-      <p style="font-size:10px;color:var(--mut);text-align:center;margin-top:10px">Te enviaremos un código de verificación. Sin contraseña.</p>
+      <button class="btn g" style="width:100%;margin-top:4px" id="btn-magic" onclick="sendMagicLink()">Enviar enlace →</button>
+      <p style="font-size:10px;color:var(--mut);text-align:center;margin-top:10px">
+        Te enviamos un enlace al email. Pulsa el enlace y entras directamente. Sin contraseña, sin código.
+      </p>
     </div>
 
-    <div id="auth-step-otp" style="display:none">
-      <div style="text-align:center;margin-bottom:14px">
-        <div style="font-size:28px;margin-bottom:4px">📬</div>
-        <div style="font-size:12px;color:var(--txt);font-weight:600">Código enviado a</div>
-        <div id="auth-email-shown" style="font-size:12px;color:var(--gold);margin-top:2px"></div>
+    <div id="auth-step-sent" style="display:none">
+      <div style="text-align:center;padding:10px 0">
+        <div style="font-size:40px;margin-bottom:10px">📬</div>
+        <div style="font-size:14px;font-weight:600;color:var(--txt);margin-bottom:6px">Enlace enviado</div>
+        <div style="font-size:12px;color:var(--mut);margin-bottom:4px">Revisa tu bandeja de entrada en</div>
+        <div id="auth-email-shown" style="font-size:13px;color:var(--gold);font-weight:700;margin-bottom:14px"></div>
+        <div style="font-size:11px;color:var(--mut);background:var(--sur);border-radius:8px;padding:10px">
+          Pulsa el enlace del email para entrar.<br>
+          <span style="color:var(--mut);font-size:10px">Revisa también en spam si no aparece.</span>
+        </div>
       </div>
-      <div class="aerr" id="err-otp"></div>
-      <div class="field">
-        <label>Código de 6 dígitos</label>
-        <input class="code" id="auth-otp" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
-      </div>
-      <button class="btn g" style="width:100%;margin-top:4px" onclick="verifyOTP()">Entrar →</button>
-      <button class="btn p" style="width:100%;margin-top:6px;font-size:11px" onclick="backToEmail()">← Cambiar email</button>
+      <button class="btn p" style="width:100%;margin-top:12px;font-size:11px" onclick="backToEmail()">← Cambiar email</button>
     </div>
   </div>
 </div>
@@ -554,781 +556,9 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const TEAMS=['🇦🇷 Argentina','🇦🇺 Australia','🇦🇹 Austria','🇩🇿 Argelia','🇧🇪 Bélgica','🇧🇦 Bosnia y Herz.','🇧🇷 Brasil','🇨🇦 Canadá','🇨🇻 Cabo Verde','🇨🇿 Chequia','🇨🇴 Colombia','🇨🇩 DR Congo','🇭🇷 Croacia','🇨🇼 Curazao','🇨🇮 Costa de Marfil','🇪🇨 Ecuador','🇪🇬 Egipto','🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia','🇪🇸 España','🇺🇸 USA','🇫🇷 Francia','🇬🇭 Ghana','🇭🇹 Haití','🇮🇷 Irán','🇮🇶 Iraq','🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra','🇯🇵 Japón','🇯🇴 Jordania','🇲🇦 Marruecos','🇲🇽 México','🇳🇱 Países Bajos','🇳🇿 Nueva Zelanda','🇳🇴 Noruega','🇵🇦 Panamá','🇵🇾 Paraguay','🇵🇹 Portugal','🇶🇦 Qatar','🇸🇦 Arabia Saudita','🇸🇳 Senegal','🇰🇷 Corea del Sur','🇿🇦 Sudáfrica','🇨🇭 Suiza','🇸🇪 Suecia','🇹🇳 Túnez','🇹🇷 Turquía','🇺🇾 Uruguay','🇺🇿 Uzbekistán'];
 const GROUPS=['A','B','C','D','E','F','G','H','I','J','K','L'];
 
-const SQUADS = {
-  '🇲🇽 México': [
-    {n:1,pos:'GK',name:'Guillermo Ochoa'},
-    {n:13,pos:'GK',name:'Raúl Rangel'},
-    {n:22,pos:'GK',name:'Carlos Acevedo'},
-    {n:2,pos:'DF',name:'Jesús Gallardo'},
-    {n:3,pos:'DF',name:'César Montes'},
-    {n:4,pos:'DF',name:'Jorge Sánchez'},
-    {n:5,pos:'DF',name:'Johan Vásquez'},
-    {n:6,pos:'DF',name:'Israel Reyes'},
-    {n:23,pos:'DF',name:'Mateo Chávez'},
-    {n:7,pos:'MF',name:'Edson Álvarez'},
-    {n:8,pos:'MF',name:'Orbelín Pineda'},
-    {n:14,pos:'MF',name:'Roberto Alvarado'},
-    {n:15,pos:'MF',name:'Luis Romo'},
-    {n:16,pos:'MF',name:'Luis Chávez'},
-    {n:17,pos:'MF',name:'Érik Lira'},
-    {n:18,pos:'MF',name:'Brian Gutiérrez'},
-    {n:19,pos:'MF',name:'Obed Vargas'},
-    {n:20,pos:'MF',name:'Álvaro Fidalgo'},
-    {n:9,pos:'FW',name:'Raúl Jiménez'},
-    {n:10,pos:'FW',name:'Alexis Vega'},
-    {n:11,pos:'FW',name:'Santiago Giménez'},
-    {n:21,pos:'FW',name:'César Huerta'},
-    {n:24,pos:'FW',name:'Julián Quiñones'},
-    {n:25,pos:'FW',name:'Guillermo Martínez'},
-    {n:26,pos:'FW',name:'Armando González'},
-  ],
-  '🇿🇦 Sudáfrica': [
-    {n:1,pos:'GK',name:'Ronwen Williams'},
-    {n:23,pos:'GK',name:'Ricardo Goss'},
-    {n:12,pos:'GK',name:'Sipho Chaine'},
-    {n:2,pos:'DF',name:'Aubrey Modiba'},
-    {n:3,pos:'DF',name:'Khuliso Mudau'},
-    {n:5,pos:'DF',name:'Nkosinathi Sibisi'},
-    {n:6,pos:'DF',name:'Mbekezeli Mbokazi'},
-    {n:4,pos:'DF',name:'Ime Okon'},
-    {n:14,pos:'DF',name:'Teboho Mokoena'},
-    {n:8,pos:'MF',name:'Sphephelo Sithole'},
-    {n:16,pos:'MF',name:'Thalente Mbatha'},
-    {n:7,pos:'FW',name:'Themba Zwane'},
-    {n:9,pos:'FW',name:'Lyle Foster'},
-    {n:11,pos:'FW',name:'Evidence Makgopa'},
-    {n:10,pos:'FW',name:'Oswin Appollis'},
-    {n:13,pos:'FW',name:'Relebohile Mofokeng'},
-  ],
-  '🇰🇷 Corea del Sur': [
-    {n:1,pos:'GK',name:'Kim Seung-gyu'},
-    {n:21,pos:'GK',name:'Jo Hyeon-woo'},
-    {n:31,pos:'GK',name:'Song Bum-keun'},
-    {n:3,pos:'DF',name:'Kim Min-jae'},
-    {n:2,pos:'DF',name:'Kim Moon-hwan'},
-    {n:5,pos:'DF',name:'Seol Young-woo'},
-    {n:4,pos:'DF',name:'Lee Tae-seok'},
-    {n:14,pos:'MF',name:'Lee Jae-sung'},
-    {n:11,pos:'MF',name:'Hwang Hee-chan'},
-    {n:16,pos:'MF',name:'Hwang In-beom'},
-    {n:10,pos:'MF',name:'Lee Kang-in'},
-    {n:7,pos:'MF',name:'Paik Seung-ho'},
-    {n:9,pos:'FW',name:'Son Heung-min'},
-    {n:20,pos:'FW',name:'Cho Gue-sung'},
-    {n:17,pos:'FW',name:'Oh Hyeon-gyu'},
-  ],
-  '🇨🇿 Chequia': [
-    {n:1,pos:'GK',name:'Matěj Kovář'},
-    {n:23,pos:'GK',name:'Jindřich Staněk'},
-    {n:2,pos:'DF',name:'Vladimír Coufal'},
-    {n:5,pos:'DF',name:'Ladislav Krejčí'},
-    {n:4,pos:'DF',name:'Tomáš Holeš'},
-    {n:6,pos:'DF',name:'David Zima'},
-    {n:8,pos:'MF',name:'Tomáš Souček'},
-    {n:15,pos:'MF',name:'Lukáš Provod'},
-    {n:17,pos:'MF',name:'Michal Sadílek'},
-    {n:18,pos:'MF',name:'Pavel Šulc'},
-    {n:9,pos:'FW',name:'Patrik Schick'},
-    {n:10,pos:'FW',name:'Adam Hložek'},
-    {n:11,pos:'FW',name:'Jan Kuchta'},
-    {n:19,pos:'FW',name:'Mojmír Chytil'},
-  ],
-  '🇨🇦 Canadá': [
-    {n:1,pos:'GK',name:'Dayne St. Clair'},
-    {n:16,pos:'GK',name:'Maxime Crépeau'},
-    {n:18,pos:'GK',name:'Owen Goodman'},
-    {n:19,pos:'DF',name:'Alphonso Davies'},
-    {n:2,pos:'DF',name:'Alistair Johnston'},
-    {n:13,pos:'DF',name:'Derek Cornelius'},
-    {n:22,pos:'DF',name:'Richie Laryea'},
-    {n:15,pos:'DF',name:'Moïse Bombito'},
-    {n:7,pos:'MF',name:'Stephen Eustáquio'},
-    {n:8,pos:'MF',name:'Ismaël Koné'},
-    {n:6,pos:'MF',name:'Mathieu Choinière'},
-    {n:17,pos:'MF',name:'Tajon Buchanan'},
-    {n:21,pos:'MF',name:'Jonathan Osorio'},
-    {n:10,pos:'FW',name:'Jonathan David'},
-    {n:9,pos:'FW',name:'Cyle Larin'},
-    {n:14,pos:'MF',name:'Jacob Shaffelburg'},
-    {n:25,pos:'MF',name:'Nathan Saliba'},
-  ],
-  '🇧🇦 Bosnia y Herz.': [
-    {n:1,pos:'GK',name:'Nikola Vasilj'},
-    {n:3,pos:'DF',name:'Sead Kolašinac'},
-    {n:5,pos:'DF',name:'Dennis Hadžikadunić'},
-    {n:2,pos:'DF',name:'Amar Dedić'},
-    {n:4,pos:'DF',name:'Nikola Katić'},
-    {n:7,pos:'MF',name:'Amir Hadžiahmetović'},
-    {n:8,pos:'MF',name:'Benjamin Tahirović'},
-    {n:10,pos:'MF',name:'Armin Gigović'},
-    {n:15,pos:'MF',name:'Esmir Bajraktarević'},
-    {n:9,pos:'FW',name:'Edin Džeko'},
-    {n:11,pos:'FW',name:'Ermedin Demirović'},
-    {n:14,pos:'FW',name:'Haris Tabaković'},
-  ],
-  '🇶🇦 Qatar': [
-    {n:1,pos:'GK',name:'Mahmud Abunada'},
-    {n:22,pos:'GK',name:'Meshaal Barsham'},
-    {n:2,pos:'DF',name:'Pedro Miguel'},
-    {n:3,pos:'DF',name:'Lucas Mendes'},
-    {n:16,pos:'DF',name:'Boualem Khoukhi'},
-    {n:14,pos:'DF',name:'Homam Ahmed'},
-    {n:6,pos:'MF',name:'Abdulaziz Hatem'},
-    {n:5,pos:'MF',name:'Jassem Gaber'},
-    {n:12,pos:'MF',name:'Karim Boudiaf'},
-    {n:23,pos:'MF',name:'Assim Madibo'},
-    {n:10,pos:'FW',name:'Hassan Al-Haydos'},
-    {n:11,pos:'FW',name:'Akram Afif'},
-    {n:19,pos:'FW',name:'Almoez Ali'},
-    {n:9,pos:'FW',name:'Mohammed Muntari'},
-    {n:7,pos:'FW',name:'Ahmed Alaaeldin'},
-  ],
-  '🇨🇭 Suiza': [
-    {n:1,pos:'GK',name:'Gregor Kobel'},
-    {n:12,pos:'GK',name:'Yvon Mvogo'},
-    {n:5,pos:'DF',name:'Manuel Akanji'},
-    {n:4,pos:'DF',name:'Nico Elvedi'},
-    {n:13,pos:'DF',name:'Ricardo Rodriguez'},
-    {n:3,pos:'DF',name:'Silvan Widmer'},
-    {n:2,pos:'DF',name:'Miro Muheim'},
-    {n:10,pos:'MF',name:'Granit Xhaka'},
-    {n:6,pos:'MF',name:'Denis Zakaria'},
-    {n:8,pos:'MF',name:'Remo Freuler'},
-    {n:15,pos:'MF',name:'Djibril Sow'},
-    {n:14,pos:'MF',name:'Ardon Jashari'},
-    {n:22,pos:'MF',name:'Fabian Rieder'},
-    {n:7,pos:'FW',name:'Breel Embolo'},
-    {n:11,pos:'FW',name:'Dan Ndoye'},
-    {n:17,pos:'FW',name:'Rubén Vargas'},
-    {n:23,pos:'FW',name:'Zeki Amdouni'},
-    {n:19,pos:'FW',name:'Noah Okafor'},
-  ],
-  '🇧🇷 Brasil': [
-    {n:1,pos:'GK',name:'Alisson'},
-    {n:23,pos:'GK',name:'Ederson'},
-    {n:12,pos:'GK',name:'Weverton'},
-    {n:4,pos:'DF',name:'Marquinhos'},
-    {n:3,pos:'DF',name:'Gabriel Magalhães'},
-    {n:2,pos:'DF',name:'Wesley'},
-    {n:6,pos:'DF',name:'Alex Sandro'},
-    {n:13,pos:'DF',name:'Danilo Luiz'},
-    {n:14,pos:'DF',name:'Bremer'},
-    {n:5,pos:'MF',name:'Casemiro'},
-    {n:8,pos:'MF',name:'Bruno Guimarães'},
-    {n:20,pos:'MF',name:'Lucas Paquetá'},
-    {n:17,pos:'MF',name:'Fabinho'},
-    {n:7,pos:'FW',name:'Vinícius Júnior'},
-    {n:10,pos:'FW',name:'Neymar'},
-    {n:11,pos:'FW',name:'Raphinha'},
-    {n:9,pos:'FW',name:'Matheus Cunha'},
-    {n:22,pos:'FW',name:'Gabriel Martinelli'},
-    {n:19,pos:'FW',name:'Endrick'},
-    {n:21,pos:'FW',name:'Luiz Henrique'},
-  ],
-  '🇲🇦 Marruecos': [
-    {n:1,pos:'GK',name:'Yassine Bounou'},
-    {n:16,pos:'GK',name:'Munir Mohamedi'},
-    {n:4,pos:'DF',name:'Achraf Hakimi'},
-    {n:3,pos:'DF',name:'Noussair Mazraoui'},
-    {n:6,pos:'DF',name:'Romain Saïss'},
-    {n:5,pos:'DF',name:'Nayef Aguerd'},
-    {n:22,pos:'DF',name:'Yahya Attiyat Allah'},
-    {n:8,pos:'MF',name:'Azzedine Ounahi'},
-    {n:7,pos:'MF',name:'Sofyan Amrabat'},
-    {n:15,pos:'MF',name:'Selim Amallah'},
-    {n:18,pos:'MF',name:'Ilias Chair'},
-    {n:11,pos:'FW',name:'Hakim Ziyech'},
-    {n:9,pos:'FW',name:'Youssef En-Nesyri'},
-    {n:10,pos:'FW',name:'Brahim Díaz'},
-    {n:17,pos:'FW',name:'Sofiane Boufal'},
-    {n:14,pos:'FW',name:'Abdessamad Ezzalzouli'},
-  ],
-  '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia': [
-    {n:1,pos:'GK',name:'Craig Gordon'},
-    {n:13,pos:'GK',name:'Angus Gunn'},
-    {n:2,pos:'DF',name:'Anthony Ralston'},
-    {n:5,pos:'DF',name:'Grant Hanley'},
-    {n:6,pos:'DF',name:'Jack Hendry'},
-    {n:3,pos:'DF',name:'Andrew Robertson'},
-    {n:4,pos:'DF',name:'Kieran Tierney'},
-    {n:8,pos:'MF',name:'Callum McGregor'},
-    {n:7,pos:'MF',name:'John McGinn'},
-    {n:14,pos:'MF',name:'Billy Gilmour'},
-    {n:15,pos:'MF',name:'Ryan Christie'},
-    {n:10,pos:'FW',name:'Che Adams'},
-    {n:9,pos:'FW',name:'Lawrence Shankland'},
-    {n:11,pos:'FW',name:'Ryan Fraser'},
-    {n:17,pos:'FW',name:'Stuart Armstrong'},
-  ],
-  '🇭🇹 Haití': [
-    {n:1,pos:'GK',name:'Johny Placide'},
-    {n:2,pos:'DF',name:'Florent Sanson'},
-    {n:5,pos:'DF',name:'Mechack Jérôme'},
-    {n:6,pos:'DF',name:'Rudy Gestede'},
-    {n:3,pos:'DF',name:'Mickaël Cantave'},
-    {n:8,pos:'MF',name:'Réginald Goreux'},
-    {n:7,pos:'MF',name:'Pascal Millien'},
-    {n:10,pos:'MF',name:'Duckens Nazon'},
-    {n:11,pos:'FW',name:'Frantzdy Pierrot'},
-    {n:9,pos:'FW',name:'Dario Cardozo'},
-  ],
-  '🇺🇸 USA': [
-    {n:1,pos:'GK',name:'Matt Turner'},
-    {n:18,pos:'GK',name:'Chris Brady'},
-    {n:2,pos:'DF',name:'Sergino Dest'},
-    {n:5,pos:'DF',name:'Tim Ream'},
-    {n:3,pos:'DF',name:'Antonee Robinson'},
-    {n:4,pos:'DF',name:'Tyler Adams'},
-    {n:6,pos:'DF',name:'Chris Richards'},
-    {n:8,pos:'MF',name:'Weston McKennie'},
-    {n:7,pos:'MF',name:'Giovanni Reyna'},
-    {n:13,pos:'MF',name:'Luca de la Torre'},
-    {n:14,pos:'MF',name:'Yunus Musah'},
-    {n:10,pos:'FW',name:'Christian Pulisic'},
-    {n:9,pos:'FW',name:'Josh Sargent'},
-    {n:11,pos:'FW',name:'Folarin Balogun'},
-    {n:17,pos:'FW',name:'Ricardo Pepi'},
-    {n:19,pos:'FW',name:'Brenden Aaronson'},
-  ],
-  '🇵🇾 Paraguay': [
-    {n:1,pos:'GK',name:'Gastón Olveira'},
-    {n:2,pos:'DF',name:'Robert Rojas'},
-    {n:3,pos:'DF',name:'Gustavo Gómez'},
-    {n:4,pos:'DF',name:'Omar Alderete'},
-    {n:5,pos:'DF',name:'Junior Alonso'},
-    {n:8,pos:'MF',name:'Andrés Cubas'},
-    {n:6,pos:'MF',name:'Mathías Villasanti'},
-    {n:10,pos:'MF',name:'Ángel Romero'},
-    {n:7,pos:'MF',name:'Miguel Almirón'},
-    {n:11,pos:'FW',name:'Julio Enciso'},
-    {n:9,pos:'FW',name:'Antonio Sanabria'},
-    {n:17,pos:'FW',name:'Alejandro Romero Gamarra'},
-  ],
-  '🇦🇺 Australia': [
-    {n:1,pos:'GK',name:'Mathew Ryan'},
-    {n:2,pos:'DF',name:'Milos Degenek'},
-    {n:5,pos:'DF',name:'Harry Souttar'},
-    {n:3,pos:'DF',name:'Aziz Behich'},
-    {n:4,pos:'DF',name:'Cameron Burgess'},
-    {n:8,pos:'MF',name:'Jackson Irvine'},
-    {n:7,pos:'MF',name:'Ajdin Hrustic'},
-    {n:6,pos:'MF',name:'Cameron Devlin'},
-    {n:10,pos:'FW',name:'Mathew Leckie'},
-    {n:11,pos:'FW',name:'Awer Mabil'},
-    {n:9,pos:'FW',name:'Nestory Irankunda'},
-    {n:13,pos:'FW',name:'Cristian Volpato'},
-  ],
-  '🇹🇷 Turquía': [
-    {n:1,pos:'GK',name:'Altay Bayındır'},
-    {n:12,pos:'GK',name:'Mert Günok'},
-    {n:2,pos:'DF',name:'Zeki Çelik'},
-    {n:3,pos:'DF',name:'Ferdi Kadıoğlu'},
-    {n:4,pos:'DF',name:'Samet Akaydin'},
-    {n:5,pos:'DF',name:'Kaan Ayhan'},
-    {n:6,pos:'DF',name:'Merih Demiral'},
-    {n:8,pos:'MF',name:'Hakan Çalhanoğlu'},
-    {n:7,pos:'MF',name:'Kerem Aktürkoğlu'},
-    {n:14,pos:'MF',name:'Salih Özcan'},
-    {n:15,pos:'MF',name:'Orkun Kökçü'},
-    {n:10,pos:'FW',name:'Arda Güler'},
-    {n:9,pos:'FW',name:'Cenk Tosun'},
-    {n:11,pos:'FW',name:'Yılmaz Sarı'},
-    {n:17,pos:'FW',name:'Baris Yilmaz'},
-  ],
-  '🇩🇪 Alemania': [
-    {n:1,pos:'GK',name:'Manuel Neuer'},
-    {n:12,pos:'GK',name:'Marc-André ter Stegen'},
-    {n:2,pos:'DF',name:'Joshua Kimmich'},
-    {n:4,pos:'DF',name:'Jonathan Tah'},
-    {n:5,pos:'DF',name:'Nico Schlotterbeck'},
-    {n:3,pos:'DF',name:'David Raum'},
-    {n:6,pos:'DF',name:'Robert Andrich'},
-    {n:8,pos:'MF',name:'Toni Kroos'},
-    {n:7,pos:'MF',name:'Florian Wirtz'},
-    {n:14,pos:'MF',name:'Jamal Musiala'},
-    {n:15,pos:'MF',name:'Leon Goretzka'},
-    {n:10,pos:'FW',name:'Kai Havertz'},
-    {n:9,pos:'FW',name:'Niclas Füllkrug'},
-    {n:11,pos:'FW',name:'Leroy Sané'},
-    {n:13,pos:'FW',name:'Thomas Müller'},
-    {n:17,pos:'FW',name:'Deniz Undav'},
-  ],
-  '🇨🇼 Curazao': [
-    {n:1,pos:'GK',name:'Eloy Room'},
-    {n:2,pos:'DF',name:'Cuco Martina'},
-    {n:5,pos:'DF',name:'Jurien Gaari'},
-    {n:3,pos:'DF',name:'Vurnon Anita'},
-    {n:7,pos:'MF',name:'Leandro Bacuna'},
-    {n:8,pos:'MF',name:'Gilermo Suarez'},
-    {n:10,pos:'FW',name:'Juninho'},
-    {n:9,pos:'FW',name:'Jarchinio Antonia'},
-    {n:11,pos:'FW',name:'Cédric Mabunda'},
-  ],
-  '🇳🇱 Países Bajos': [
-    {n:1,pos:'GK',name:'Bart Verbruggen'},
-    {n:13,pos:'GK',name:'Mark Flekken'},
-    {n:2,pos:'DF',name:'Denzel Dumfries'},
-    {n:4,pos:'DF',name:'Virgil van Dijk'},
-    {n:3,pos:'DF',name:'Nathan Aké'},
-    {n:5,pos:'DF',name:'Stefan de Vrij'},
-    {n:6,pos:'DF',name:'Matthijs de Ligt'},
-    {n:8,pos:'MF',name:'Frenkie de Jong'},
-    {n:7,pos:'MF',name:'Steven Bergwijn'},
-    {n:14,pos:'MF',name:'Tijjani Reijnders'},
-    {n:21,pos:'MF',name:'Georginio Wijnaldum'},
-    {n:10,pos:'FW',name:'Memphis Depay'},
-    {n:9,pos:'FW',name:'Wout Weghorst'},
-    {n:11,pos:'FW',name:'Cody Gakpo'},
-    {n:17,pos:'FW',name:'Donyell Malen'},
-  ],
-  '🇯🇵 Japón': [
-    {n:1,pos:'GK',name:'Shuichi Gonda'},
-    {n:12,pos:'GK',name:'Zion Suzuki'},
-    {n:2,pos:'DF',name:'Hiroki Sakai'},
-    {n:5,pos:'DF',name:'Takehiro Tomiyasu'},
-    {n:3,pos:'DF',name:'Yuto Nagatomo'},
-    {n:4,pos:'DF',name:'Ko Itakura'},
-    {n:6,pos:'DF',name:'Wataru Endo'},
-    {n:8,pos:'MF',name:'Hidemasa Morita'},
-    {n:7,pos:'MF',name:'Junya Ito'},
-    {n:14,pos:'MF',name:'Daichi Kamada'},
-    {n:10,pos:'MF',name:'Takumi Minamino'},
-    {n:9,pos:'FW',name:'Ayase Ueda'},
-    {n:11,pos:'FW',name:'Kaoru Mitoma'},
-    {n:15,pos:'FW',name:'Ritsu Doan'},
-    {n:17,pos:'FW',name:'Ao Tanaka'},
-  ],
-  '🇸🇪 Suecia': [
-    {n:1,pos:'GK',name:'Robin Olsen'},
-    {n:13,pos:'GK',name:'Karl-Johan Johnsson'},
-    {n:2,pos:'DF',name:'Mikael Lustig'},
-    {n:5,pos:'DF',name:'Victor Lindelöf'},
-    {n:3,pos:'DF',name:'Ludwig Augustinsson'},
-    {n:4,pos:'DF',name:'Marcus Danielson'},
-    {n:8,pos:'MF',name:'Albin Ekdal'},
-    {n:6,pos:'MF',name:'Emil Forsberg'},
-    {n:7,pos:'MF',name:'Viktor Claesson'},
-    {n:10,pos:'FW',name:'Dejan Kulusevski'},
-    {n:9,pos:'FW',name:'Viktor Gyökeres'},
-    {n:11,pos:'FW',name:'Alexander Isak'},
-    {n:17,pos:'FW',name:'Jordan Larsson'},
-  ],
-  '🇹🇳 Túnez': [
-    {n:1,pos:'GK',name:'Aymen Dahmen'},
-    {n:2,pos:'DF',name:'Montassar Talbi'},
-    {n:5,pos:'DF',name:'Dylan Bronn'},
-    {n:3,pos:'DF',name:'Ali Maâloul'},
-    {n:4,pos:'DF',name:'Yassine Meriah'},
-    {n:8,pos:'MF',name:'Aissa Laidouni'},
-    {n:6,pos:'MF',name:'Ellyes Skhiri'},
-    {n:7,pos:'MF',name:'Wahbi Khazri'},
-    {n:10,pos:'MF',name:'Hannibal Mejbri'},
-    {n:9,pos:'FW',name:'Seifeddine Jaziri'},
-    {n:11,pos:'FW',name:'Sayfallah Ltaief'},
-    {n:14,pos:'FW',name:'Issam Jebali'},
-  ],
-  '🇨🇮 Costa de Marfil': [
-    {n:1,pos:'GK',name:'Yahia Fofana'},
-    {n:23,pos:'GK',name:'Badra Sangaré'},
-    {n:2,pos:'DF',name:'Serge Aurier'},
-    {n:3,pos:'DF',name:'Eric Bailly'},
-    {n:5,pos:'DF',name:'Wilfried Singo'},
-    {n:4,pos:'DF',name:'Odilon Kossounou'},
-    {n:8,pos:'MF',name:'Jean Michaël Seri'},
-    {n:6,pos:'MF',name:'Ibrahim Sangaré'},
-    {n:7,pos:'MF',name:'Franck Kessié'},
-    {n:10,pos:'FW',name:'Sébastien Haller'},
-    {n:9,pos:'FW',name:'Nicolas Pépé'},
-    {n:11,pos:'FW',name:'Simon Adingra'},
-    {n:17,pos:'FW',name:'Wilfried Zaha'},
-  ],
-  '🇪🇨 Ecuador': [
-    {n:1,pos:'GK',name:'Hernán Galíndez'},
-    {n:2,pos:'DF',name:'Angelo Preciado'},
-    {n:3,pos:'DF',name:'Pervis Estupiñán'},
-    {n:5,pos:'DF',name:'William Pacho'},
-    {n:4,pos:'DF',name:'Piero Hincapié'},
-    {n:8,pos:'MF',name:'Carlos Gruezo'},
-    {n:6,pos:'MF',name:'Jhegson Méndez'},
-    {n:7,pos:'MF',name:'Gonzalo Plata'},
-    {n:14,pos:'MF',name:'Moisés Caicedo'},
-    {n:10,pos:'FW',name:'Jeremy Sarmiento'},
-    {n:9,pos:'FW',name:'Enner Valencia'},
-    {n:11,pos:'FW',name:'Michael Estrada'},
-    {n:17,pos:'FW',name:'Leonardo Campana'},
-  ],
-  '🇪🇸 España': [
-    {n:1,pos:'GK',name:'David Raya'},
-    {n:13,pos:'GK',name:'Unai Simón'},
-    {n:2,pos:'DF',name:'Dani Carvajal'},
-    {n:4,pos:'DF',name:'Nacho Fernández'},
-    {n:3,pos:'DF',name:'Alejandro Balde'},
-    {n:5,pos:'DF',name:'Robin Le Normand'},
-    {n:23,pos:'DF',name:'Marc Cucurella'},
-    {n:8,pos:'MF',name:'Pedri'},
-    {n:6,pos:'MF',name:'Rodri'},
-    {n:16,pos:'MF',name:'Martín Zubimendi'},
-    {n:15,pos:'MF',name:'Mikel Merino'},
-    {n:14,pos:'MF',name:'Fabián Ruiz'},
-    {n:10,pos:'FW',name:'Dani Olmo'},
-    {n:7,pos:'FW',name:'Álvaro Morata'},
-    {n:9,pos:'FW',name:'Joselu'},
-    {n:11,pos:'FW',name:'Ferran Torres'},
-    {n:17,pos:'FW',name:'Lamine Yamal'},
-    {n:22,pos:'FW',name:'Nico Williams'},
-  ],
-  '🇨🇻 Cabo Verde': [
-    {n:1,pos:'GK',name:'Vozinha'},
-    {n:2,pos:'DF',name:'Stopira'},
-    {n:5,pos:'DF',name:'Steven Fortes'},
-    {n:3,pos:'DF',name:'Diney'},
-    {n:8,pos:'MF',name:'Kenny Rocha'},
-    {n:6,pos:'MF',name:'Garry Rodrigues'},
-    {n:7,pos:'MF',name:'Cláudio Winck'},
-    {n:10,pos:'FW',name:'Ryan Mendes'},
-    {n:9,pos:'FW',name:'Djaniny'},
-    {n:11,pos:'FW',name:'Willy Semedo'},
-  ],
-  '🇸🇦 Arabia Saudita': [
-    {n:1,pos:'GK',name:'Mohammed Al-Owais'},
-    {n:2,pos:'DF',name:'Sultan Al-Ghannam'},
-    {n:5,pos:'DF',name:'Ali Al-Bulaihi'},
-    {n:3,pos:'DF',name:'Yasser Al-Shahrani'},
-    {n:6,pos:'DF',name:'Abdulelah Al-Amri'},
-    {n:8,pos:'MF',name:'Sami Al-Najei'},
-    {n:7,pos:'MF',name:'Abdullah Al-Hamdan'},
-    {n:10,pos:'MF',name:'Saleh Al-Shehri'},
-    {n:14,pos:'MF',name:'Mohamed Kanno'},
-    {n:9,pos:'FW',name:'Firas Al-Buraikan'},
-    {n:11,pos:'FW',name:'Marwan Al-Sahafi'},
-    {n:17,pos:'FW',name:'Fahad Al-Muwallad'},
-  ],
-  '🇺🇾 Uruguay': [
-    {n:1,pos:'GK',name:'Sergio Rochet'},
-    {n:23,pos:'GK',name:'Fernando Muslera'},
-    {n:2,pos:'DF',name:'Néstor Araújo'},
-    {n:3,pos:'DF',name:'Mathías Olivera'},
-    {n:4,pos:'DF',name:'Ronald Araújo'},
-    {n:6,pos:'DF',name:'José María Giménez'},
-    {n:5,pos:'DF',name:'Diego Godín'},
-    {n:8,pos:'MF',name:'Rodrigo Bentancur'},
-    {n:7,pos:'MF',name:'Giorgian De Arrascaeta'},
-    {n:14,pos:'MF',name:'Lucas Torreira'},
-    {n:15,pos:'MF',name:'Federico Valverde'},
-    {n:10,pos:'FW',name:'Giorgian De Arrascaeta'},
-    {n:9,pos:'FW',name:'Edinson Cavani'},
-    {n:11,pos:'FW',name:'Darwin Núñez'},
-    {n:21,pos:'FW',name:'Maximiliano Araújo'},
-  ],
-  '🇧🇪 Bélgica': [
-    {n:1,pos:'GK',name:'Koen Casteels'},
-    {n:13,pos:'GK',name:'Matz Sels'},
-    {n:2,pos:'DF',name:'Timothy Castagne'},
-    {n:4,pos:'DF',name:'Toby Alderweireld'},
-    {n:3,pos:'DF',name:'Leander Dendoncker'},
-    {n:5,pos:'DF',name:'Jan Vertonghen'},
-    {n:6,pos:'DF',name:'Axel Witsel'},
-    {n:8,pos:'MF',name:'Youri Tielemans'},
-    {n:7,pos:'MF',name:'Kevin De Bruyne'},
-    {n:14,pos:'MF',name:'Amadou Onana'},
-    {n:15,pos:'MF',name:'Hans Vanaken'},
-    {n:10,pos:'FW',name:'Eden Hazard'},
-    {n:9,pos:'FW',name:'Romelu Lukaku'},
-    {n:11,pos:'FW',name:'Dodi Lukebakio'},
-    {n:17,pos:'FW',name:'Leandro Trossard'},
-    {n:22,pos:'FW',name:'Lois Openda'},
-  ],
-  '🇪🇬 Egipto': [
-    {n:1,pos:'GK',name:'Mohamed El-Shennawy'},
-    {n:2,pos:'DF',name:'Ahmed Hegazi'},
-    {n:5,pos:'DF',name:'Omar Kamal'},
-    {n:3,pos:'DF',name:'Omar Gaber'},
-    {n:4,pos:'DF',name:'Karim Fouad'},
-    {n:8,pos:'MF',name:'Hamdi Fathi'},
-    {n:6,pos:'MF',name:'Tarek Hamed'},
-    {n:10,pos:'MF',name:'Mohamed Salah'},
-    {n:7,pos:'MF',name:'Amr El-Sulaya'},
-    {n:9,pos:'FW',name:'Omar Marmoush'},
-    {n:11,pos:'FW',name:'Mostafa Mohamed'},
-    {n:17,pos:'FW',name:'Zizo'},
-  ],
-  '🇮🇷 Irán': [
-    {n:1,pos:'GK',name:'Alireza Beiranvand'},
-    {n:2,pos:'DF',name:'Sadegh Moharrami'},
-    {n:5,pos:'DF',name:'Majid Hosseini'},
-    {n:3,pos:'DF',name:'Ehsan Hajsafi'},
-    {n:4,pos:'DF',name:'Shoja Khalilzadeh'},
-    {n:8,pos:'MF',name:'Saeid Ezatolahi'},
-    {n:6,pos:'MF',name:'Alireza Jahanbakhsh'},
-    {n:7,pos:'MF',name:'Ali Gholizadeh'},
-    {n:10,pos:'MF',name:'Mehdi Torabi'},
-    {n:9,pos:'FW',name:'Sardar Azmoun'},
-    {n:11,pos:'FW',name:'Karim Ansarifard'},
-    {n:17,pos:'FW',name:'Mehdi Taremi'},
-  ],
-  '🇳🇿 Nueva Zelanda': [
-    {n:1,pos:'GK',name:'Oli Sail'},
-    {n:2,pos:'DF',name:'Liberato Cacace'},
-    {n:5,pos:'DF',name:'Winston Reid'},
-    {n:3,pos:'DF',name:'Nando Pijnaker'},
-    {n:8,pos:'MF',name:'Callum McCowatt'},
-    {n:6,pos:'MF',name:'Elijah Just'},
-    {n:7,pos:'MF',name:'Marco Rojas'},
-    {n:10,pos:'MF',name:'Clayton Lewis'},
-    {n:9,pos:'FW',name:'Hamish Watson'},
-    {n:11,pos:'FW',name:'Chris Wood'},
-    {n:17,pos:'FW',name:'Ryan De Vries'},
-  ],
-  '🇫🇷 Francia': [
-    {n:1,pos:'GK',name:'Mike Maignan'},
-    {n:23,pos:'GK',name:'Brice Samba'},
-    {n:2,pos:'DF',name:'Malo Gusto'},
-    {n:5,pos:'DF',name:'Jules Koundé'},
-    {n:3,pos:'DF',name:'Théo Hernández'},
-    {n:4,pos:'DF',name:'William Saliba'},
-    {n:24,pos:'DF',name:'Ibrahima Konaté'},
-    {n:6,pos:'DF',name:'Lucas Hernández'},
-    {n:8,pos:'MF',name:'Aurélien Tchouaméni'},
-    {n:14,pos:'MF',name:'Adrien Rabiot'},
-    {n:6,pos:'MF',name:'N\'Golo Kanté'},
-    {n:15,pos:'MF',name:'Warren Zaïre-Emery'},
-    {n:7,pos:'FW',name:'Ousmane Dembélé'},
-    {n:10,pos:'FW',name:'Kylian Mbappé'},
-    {n:9,pos:'FW',name:'Olivier Giroud'},
-    {n:11,pos:'FW',name:'Bradley Barcola'},
-    {n:17,pos:'FW',name:'Rayan Cherki'},
-  ],
-  '🇸🇳 Senegal': [
-    {n:1,pos:'GK',name:'Édouard Mendy'},
-    {n:23,pos:'GK',name:'Alfred Gomis'},
-    {n:2,pos:'DF',name:'Bouna Sarr'},
-    {n:5,pos:'DF',name:'Kalidou Koulibaly'},
-    {n:3,pos:'DF',name:'Saliou Ciss'},
-    {n:4,pos:'DF',name:'Abdou Diallo'},
-    {n:8,pos:'MF',name:'Idrissa Gueye'},
-    {n:6,pos:'MF',name:'Cheikhou Kouyaté'},
-    {n:7,pos:'MF',name:'Nampalys Mendy'},
-    {n:10,pos:'FW',name:'Sadio Mané'},
-    {n:9,pos:'FW',name:'Boulaye Dia'},
-    {n:11,pos:'FW',name:'Ismaïla Sarr'},
-    {n:17,pos:'FW',name:'Nicolas Jackson'},
-    {n:19,pos:'FW',name:'Habib Diallo'},
-  ],
-  '🇳🇴 Noruega': [
-    {n:1,pos:'GK',name:'Ørjan Nyland'},
-    {n:22,pos:'GK',name:'Sascha Burchert'},
-    {n:2,pos:'DF',name:'Kristoffer Ajer'},
-    {n:5,pos:'DF',name:'Leo Skiri Østigård'},
-    {n:3,pos:'DF',name:'Birger Meling'},
-    {n:4,pos:'DF',name:'Andreas Hanche-Olsen'},
-    {n:8,pos:'MF',name:'Sander Berge'},
-    {n:6,pos:'MF',name:'Mathias Normann'},
-    {n:7,pos:'MF',name:'Martin Ødegaard'},
-    {n:14,pos:'MF',name:'Fredrik Aursnes'},
-    {n:10,pos:'FW',name:'Mohamed Elyounoussi'},
-    {n:9,pos:'FW',name:'Erling Haaland'},
-    {n:11,pos:'FW',name:'Alexander Sørloth'},
-    {n:17,pos:'FW',name:'Jens Petter Hauge'},
-  ],
-  '🇮🇶 Iraq': [
-    {n:1,pos:'GK',name:'Jalal Hassan'},
-    {n:2,pos:'DF',name:'Ali Adnan'},
-    {n:5,pos:'DF',name:'Ahmed Ibrahim'},
-    {n:3,pos:'DF',name:'Rebin Sulaka'},
-    {n:8,pos:'MF',name:'Amjad Attwan'},
-    {n:6,pos:'MF',name:'Mohanad Ali'},
-    {n:7,pos:'MF',name:'Hossam Musa'},
-    {n:10,pos:'FW',name:'Humam Tariq'},
-    {n:9,pos:'FW',name:'Aymen Hussein'},
-    {n:11,pos:'FW',name:'Mohanad Lateef'},
-  ],
-  '🇦🇷 Argentina': [
-    {n:1,pos:'GK',name:'Emiliano Martínez'},
-    {n:12,pos:'GK',name:'Juan Musso'},
-    {n:2,pos:'DF',name:'Gonzalo Montiel'},
-    {n:3,pos:'DF',name:'Nicolás Tagliafico'},
-    {n:4,pos:'DF',name:'Germán Pezzella'},
-    {n:6,pos:'DF',name:'Lisandro Martínez'},
-    {n:13,pos:'DF',name:'Cristian Romero'},
-    {n:19,pos:'DF',name:'Nicolás Otamendi'},
-    {n:8,pos:'MF',name:'Enzo Fernández'},
-    {n:5,pos:'MF',name:'Leandro Paredes'},
-    {n:7,pos:'MF',name:'Rodrigo De Paul'},
-    {n:14,pos:'MF',name:'Exequiel Palacios'},
-    {n:25,pos:'MF',name:'Alexis Mac Allister'},
-    {n:10,pos:'FW',name:'Lionel Messi'},
-    {n:9,pos:'FW',name:'Julián Álvarez'},
-    {n:11,pos:'FW',name:'Ángel Di María'},
-    {n:22,pos:'FW',name:'Lautaro Martínez'},
-    {n:23,pos:'FW',name:'Paulo Dybala'},
-  ],
-  '🇩🇿 Argelia': [
-    {n:1,pos:'GK',name:'Raïs M\'Bolhi'},
-    {n:2,pos:'DF',name:'Aïssa Mandi'},
-    {n:5,pos:'DF',name:'Djamel Benlamri'},
-    {n:3,pos:'DF',name:'Ramy Bensebaini'},
-    {n:4,pos:'DF',name:'Mehdi Tahrat'},
-    {n:8,pos:'MF',name:'Sofiane Feghouli'},
-    {n:6,pos:'MF',name:'Nabil Bentaleb'},
-    {n:7,pos:'MF',name:'Riyad Mahrez'},
-    {n:10,pos:'MF',name:'Youcef Atal'},
-    {n:9,pos:'FW',name:'Islam Slimani'},
-    {n:11,pos:'FW',name:'Baghdad Bounedjah'},
-    {n:14,pos:'FW',name:'Youssouf Belaïli'},
-  ],
-  '🇦🇹 Austria': [
-    {n:1,pos:'GK',name:'Patrick Pentz'},
-    {n:12,pos:'GK',name:'Alexander Schlager'},
-    {n:2,pos:'DF',name:'Stefan Posch'},
-    {n:5,pos:'DF',name:'Phillipp Mwene'},
-    {n:3,pos:'DF',name:'Philipp Lienhart'},
-    {n:4,pos:'DF',name:'Kevin Danso'},
-    {n:8,pos:'MF',name:'David Alaba'},
-    {n:6,pos:'MF',name:'Florian Grillitsch'},
-    {n:7,pos:'MF',name:'Marko Arnautovic'},
-    {n:10,pos:'MF',name:'Marcel Sabitzer'},
-    {n:14,pos:'MF',name:'Christoph Baumgartner'},
-    {n:9,pos:'FW',name:'Michael Gregoritsch'},
-    {n:11,pos:'FW',name:'Sasa Kalajdzic'},
-    {n:17,pos:'FW',name:'Guido Burgstaller'},
-  ],
-  '🇯🇴 Jordania': [
-    {n:1,pos:'GK',name:'Amer Shafi'},
-    {n:2,pos:'DF',name:'Badr Al-Rawabdeh'},
-    {n:5,pos:'DF',name:'Yazan Al-Naimat'},
-    {n:3,pos:'DF',name:'Baha\' Faisal'},
-    {n:8,pos:'MF',name:'Musa Al-Tamari'},
-    {n:6,pos:'MF',name:'Mousa Al-Taamari'},
-    {n:7,pos:'MF',name:'Yaser Asprilla'},
-    {n:10,pos:'FW',name:'Yazan Al-Arab'},
-    {n:9,pos:'FW',name:'Mahmoud Dashti'},
-    {n:11,pos:'FW',name:'Ahmad Ababneh'},
-  ],
-  '🇵🇹 Portugal': [
-    {n:1,pos:'GK',name:'Rui Patrício'},
-    {n:12,pos:'GK',name:'Diogo Costa'},
-    {n:2,pos:'DF',name:'João Cancelo'},
-    {n:3,pos:'DF',name:'Nuno Mendes'},
-    {n:4,pos:'DF',name:'Rúben Dias'},
-    {n:5,pos:'DF',name:'Pepe'},
-    {n:6,pos:'DF',name:'Danilo Pereira'},
-    {n:8,pos:'MF',name:'João Moutinho'},
-    {n:14,pos:'MF',name:'William Carvalho'},
-    {n:16,pos:'MF',name:'Vitinha'},
-    {n:10,pos:'MF',name:'Bernardo Silva'},
-    {n:8,pos:'MF',name:'Bruno Fernandes'},
-    {n:7,pos:'FW',name:'Cristiano Ronaldo'},
-    {n:9,pos:'FW',name:'André Silva'},
-    {n:11,pos:'FW',name:'Rafael Leão'},
-    {n:17,pos:'FW',name:'Pedro Neto'},
-    {n:23,pos:'FW',name:'João Félix'},
-  ],
-  '🇺🇿 Uzbekistán': [
-    {n:1,pos:'GK',name:'Utkir Yusupov'},
-    {n:2,pos:'DF',name:'Dostonbek Khamdamov'},
-    {n:5,pos:'DF',name:'Shokhrukh Jaloliddinov'},
-    {n:3,pos:'DF',name:'Khojiakbar Alijonov'},
-    {n:8,pos:'MF',name:'Otabek Shukurov'},
-    {n:6,pos:'MF',name:'Oybek Dzaksybekov'},
-    {n:7,pos:'MF',name:'Bobur Abdixoliqov'},
-    {n:10,pos:'FW',name:'Abbosbek Fayzullaev'},
-    {n:9,pos:'FW',name:'Eldor Shomurodov'},
-    {n:11,pos:'FW',name:'Jaloliddin Masharipov'},
-    {n:17,pos:'FW',name:'Nodirbek Qodirov'},
-  ],
-  '🇨🇴 Colombia': [
-    {n:1,pos:'GK',name:'Camilo Vargas'},
-    {n:12,pos:'GK',name:'David Ospina'},
-    {n:2,pos:'DF',name:'Santiago Arias'},
-    {n:3,pos:'DF',name:'Johan Mojica'},
-    {n:4,pos:'DF',name:'Dávinson Sánchez'},
-    {n:5,pos:'DF',name:'Yerry Mina'},
-    {n:6,pos:'DF',name:'Stefan Medina'},
-    {n:8,pos:'MF',name:'Wilmar Barrios'},
-    {n:7,pos:'MF',name:'James Rodríguez'},
-    {n:14,pos:'MF',name:'Jefferson Lerma'},
-    {n:15,pos:'MF',name:'Matheus Uribe'},
-    {n:10,pos:'FW',name:'Cuadrado'},
-    {n:9,pos:'FW',name:'Radamel Falcao'},
-    {n:11,pos:'FW',name:'Luis Díaz'},
-    {n:17,pos:'FW',name:'Jhon Durán'},
-  ],
-  '🇨🇩 DR Congo': [
-    {n:1,pos:'GK',name:'Joël Kiassumbua'},
-    {n:2,pos:'DF',name:'Marcel Tisserand'},
-    {n:5,pos:'DF',name:'Chancel Mbemba'},
-    {n:3,pos:'DF',name:'Christian Luyindama'},
-    {n:8,pos:'MF',name:'Willy Boly'},
-    {n:6,pos:'MF',name:'Paul-José Mpoku'},
-    {n:7,pos:'MF',name:'Yannick Bolasie'},
-    {n:10,pos:'FW',name:'Cédric Bakambu'},
-    {n:9,pos:'FW',name:'Dieumerci Mbokani'},
-    {n:11,pos:'FW',name:'Théo Bongonda'},
-  ],
-  '🇭🇷 Croacia': [
-    {n:1,pos:'GK',name:'Dominik Livaković'},
-    {n:23,pos:'GK',name:'Ivica Ivušić'},
-    {n:2,pos:'DF',name:'Josip Juranović'},
-    {n:4,pos:'DF',name:'Joško Gvardiol'},
-    {n:3,pos:'DF',name:'Borna Sosa'},
-    {n:5,pos:'DF',name:'Duje Ćaleta-Car'},
-    {n:6,pos:'DF',name:'Dejan Lovren'},
-    {n:8,pos:'MF',name:'Mateo Kovačić'},
-    {n:7,pos:'MF',name:'Marcelo Brozović'},
-    {n:14,pos:'MF',name:'Luka Modrić'},
-    {n:15,pos:'MF',name:'Mario Pašalić'},
-    {n:10,pos:'FW',name:'Nikola Vlašić'},
-    {n:9,pos:'FW',name:'Andrej Kramarić'},
-    {n:11,pos:'FW',name:'Ivan Perišić'},
-    {n:17,pos:'FW',name:'Bruno Petković'},
-  ],
-  '🇵🇦 Panamá': [
-    {n:1,pos:'GK',name:'Luis Mejía'},
-    {n:2,pos:'DF',name:'Fidel Escobar'},
-    {n:5,pos:'DF',name:'Harold Cummings'},
-    {n:3,pos:'DF',name:'Eric Davis'},
-    {n:4,pos:'DF',name:'Anibal Godoy'},
-    {n:8,pos:'MF',name:'Adalberto Carrasquilla'},
-    {n:6,pos:'MF',name:'Edgar Bárcenas'},
-    {n:7,pos:'MF',name:'Iván Anderson'},
-    {n:10,pos:'FW',name:'Rolando Blackburn'},
-    {n:9,pos:'FW',name:'Ismael Díaz'},
-    {n:11,pos:'FW',name:'Alberto Quintero'},
-  ],
-  '🇬🇭 Ghana': [
-    {n:1,pos:'GK',name:'Lawrence Ati-Zigi'},
-    {n:22,pos:'GK',name:'Jojo Wollacott'},
-    {n:2,pos:'DF',name:'Daniel Amartey'},
-    {n:5,pos:'DF',name:'Jonathan Mensah'},
-    {n:3,pos:'DF',name:'Gideon Mensah'},
-    {n:4,pos:'DF',name:'Alexander Djiku'},
-    {n:8,pos:'MF',name:'Thomas Partey'},
-    {n:6,pos:'MF',name:'Daniel-Kofi Kyereh'},
-    {n:7,pos:'MF',name:'Jordan Ayew'},
-    {n:10,pos:'MF',name:'André Ayew'},
-    {n:9,pos:'FW',name:'Inaki Williams'},
-    {n:11,pos:'FW',name:'Osman Bukari'},
-    {n:17,pos:'FW',name:'Mohammed Kudus'},
-  ],
-  '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra': [
-    {n:1,pos:'GK',name:'Jordan Pickford'},
-    {n:13,pos:'GK',name:'Nick Pope'},
-    {n:2,pos:'DF',name:'Trent Alexander-Arnold'},
-    {n:5,pos:'DF',name:'John Stones'},
-    {n:3,pos:'DF',name:'Luke Shaw'},
-    {n:4,pos:'DF',name:'Marc Guehi'},
-    {n:6,pos:'DF',name:'Harry Maguire'},
-    {n:8,pos:'MF',name:'Declan Rice'},
-    {n:7,pos:'MF',name:'Jack Grealish'},
-    {n:14,pos:'MF',name:'Kieran Trippier'},
-    {n:15,pos:'MF',name:'Phil Foden'},
-    {n:10,pos:'FW',name:'Jude Bellingham'},
-    {n:9,pos:'FW',name:'Harry Kane'},
-    {n:11,pos:'FW',name:'Bukayo Saka'},
-    {n:17,pos:'FW',name:'Rashford'},
-    {n:20,pos:'FW',name:'Ollie Watkins'},
-  ],
-};
+// Jugadores cargados desde Supabase (tabla players)
+// Ver loadAllPlayersFromDB() — no hay datos hardcodeados
+const SQUADS = {}; // legacy fallback vacío
 
 
 // ── BRACKET OFICIAL R32 (fuente: FIFA / worldcuppass.com) ─────────
@@ -1771,6 +1001,12 @@ function renderBracketKO(){
 function renderFantasyForm(){
   const f=S.fantasy,locked=f?.locked,unl=f?.unlocked_by_admin;
   const area=document.getElementById('fantasyForm');if(!area)return;
+  // Show loading spinner if players not yet loaded
+  if(!S._allPlayers&&!locked){
+    area.innerHTML='<div style="text-align:center;padding:16px;color:var(--mut);font-size:12px">⏳ Cargando jugadores...</div>';
+    loadAllPlayersFromDB().then(()=>renderFantasyForm());
+    return;
+  }
   if(locked&&!unl){
     area.innerHTML=`
     <div class="pf"><label>🌍 Tu equipo</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${f.team||'—'}</span></div>
@@ -1780,12 +1016,13 @@ function renderFantasyForm(){
     </div>
     <div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee</div>`;
   }else{
-    const teamOpts=TEAMS.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');
+    // Teams from DB players (unique teams in tournament)
+    const dbTeams=S._allPlayers?.length ? [...new Set(S._allPlayers.map(p=>p.team))].sort() : TEAMS;
+    const teamOpts=dbTeams.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');
     const posLabels={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
-    // Load from DB cache (loaded by onTeamChange) or inline SQUADS fallback
+    // Load from DB cache
     const dbSquad=f?.team&&S._players?.[f.team];
-    const inlineSquad=f?.team?SQUADS[f.team]||[]:[];
-    const rawSquad=dbSquad||inlineSquad.map(p=>({name:p.name,number:p.n,position:p.pos}));
+    const rawSquad=dbSquad||[];
     let playerOpts='<option value="">— Elige jugador —</option>';
     let lastPos='';
     rawSquad.forEach(p=>{
@@ -1795,13 +1032,12 @@ function renderFantasyForm(){
       const selected=(f?.player===p.name)?' selected':'';
       playerOpts+=`<option value="${p.name}" data-num="${num}"${selected}>#${num} ${p.name}</option>`;
     });
-    // Player search from DB (fallback to inline SQUADS)
+    // Player search from DB
     const posLabelsAll={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
     const playerFilterTeam=f?.playerTeamFilter||'';
-    // Use DB players if available, else inline SQUADS
+    // DB players (loaded by preloadPlayers on init)
     const dbAll=S._allPlayers||[];
-    const inlineAll=Object.entries(SQUADS).flatMap(([team,ps])=>ps.map(p=>({name:p.name,number:p.n,position:p.pos,team})));
-    const allPlayersFlat=dbAll.length?dbAll.map(p=>({name:p.name,number:p.number,position:p.position,team:p.team})):inlineAll;
+    const allPlayersFlat=dbAll.map(p=>({name:p.name,number:p.number,position:p.position,team:p.team}));
     const filteredPlayers=playerFilterTeam?allPlayersFlat.filter(p=>p.team===playerFilterTeam):allPlayersFlat;
     let allPlayerOpts='<option value="">— Elige jugador —</option>';
     let lastPosAll='';
@@ -1823,7 +1059,7 @@ function renderFantasyForm(){
     <div class="pf"><label>🔍 Filtrar jugadores por país (opcional)</label>
       <select onchange="filterFantasyPlayers(this.value)">
         <option value="">— Todos los países —</option>
-        ${TEAMS.map(t=>`<option value="${t}"${playerFilterTeam===t?' selected':''}>${t}</option>`).join('')}
+        ${dbTeams.map(t=>`<option value="${t}"${playerFilterTeam===t?' selected':''}>${t}</option>`).join('')}
       </select>
     </div>
     <div class="pf"><label>⭐ Tu jugador</label>
@@ -2023,7 +1259,7 @@ function showScreen(id){
   if(id==='dashboard')renderDashboard();
   if(id==='auth'){
     document.getElementById('auth-step-email').style.display='';
-    document.getElementById('auth-step-otp').style.display='none';
+    document.getElementById('auth-step-sent').style.display='none';
   }
 }
 function setSS(t,msg){document.getElementById('sdot').className='sdot '+(t==='ok'?'ok':t==='err'?'err':'sync');document.getElementById('sstatus').textContent=msg;}
@@ -2037,35 +1273,28 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 
 
 // ── EMAIL OTP AUTH ────────────────────────────────────────────────
-async function sendOTP(){
+async function sendMagicLink(){
   const email=document.getElementById('auth-email').value.trim().toLowerCase();
   if(!email||!email.includes('@')){showErr('err-email','Introduce un email válido');return;}
   hideErr('err-email');
-  const btn=event.target;btn.disabled=true;btn.textContent='Enviando...';
-  const{error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
-  btn.disabled=false;btn.textContent='Continuar →';
+  const btn=document.getElementById('btn-magic');
+  btn.disabled=true;btn.textContent='Enviando...';
+  // Redirect back to this same page after clicking the magic link
+  const redirectTo=window.location.origin+window.location.pathname;
+  const{error}=await sb.auth.signInWithOtp({
+    email,
+    options:{shouldCreateUser:true, emailRedirectTo:redirectTo}
+  });
+  btn.disabled=false;btn.textContent='Enviar enlace →';
   if(error){showErr('err-email','Error: '+error.message);return;}
   document.getElementById('auth-email-shown').textContent=email;
   document.getElementById('auth-step-email').style.display='none';
-  document.getElementById('auth-step-otp').style.display='';
-  setTimeout(()=>document.getElementById('auth-otp')?.focus(),100);
-}
-async function verifyOTP(){
-  const email=document.getElementById('auth-email').value.trim().toLowerCase();
-  const token=document.getElementById('auth-otp').value.trim();
-  if(token.length!==6){showErr('err-otp','El código debe tener 6 dígitos');return;}
-  hideErr('err-otp');
-  const btn=event.target;btn.disabled=true;btn.textContent='Verificando...';
-  const{data,error}=await sb.auth.verifyOtp({email,token,type:'email'});
-  btn.disabled=false;btn.textContent='Entrar →';
-  if(error){showErr('err-otp','Código incorrecto o expirado ❌');return;}
-  // onAuthStateChange will fire and handle the rest
+  document.getElementById('auth-step-sent').style.display='';
 }
 function backToEmail(){
   document.getElementById('auth-step-email').style.display='';
-  document.getElementById('auth-step-otp').style.display='none';
-  document.getElementById('auth-otp').value='';
-  hideErr('err-otp');
+  document.getElementById('auth-step-sent').style.display='none';
+  hideErr('err-email');
 }
 async function signOut(){
   await sb.auth.signOut();
