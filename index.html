@@ -582,24 +582,40 @@ function clearGroupSess(){const keep={authUid:S.authUid,authEmail:S.authEmail};O
 // AUTH
 function switchTab(t){document.querySelectorAll('.atab').forEach((el,i)=>el.classList.toggle('active',(i===0&&t==='join')||(i===1&&t==='create')));document.getElementById('form-join').classList.toggle('active',t==='join');document.getElementById('form-create').classList.toggle('active',t==='create');}
 async function joinGroup(){
-  if(!S.authUid){showErr('err-join','Inicia sesión primero');return;}
   const code=document.getElementById('dash-join-code').value.trim().toUpperCase();
   const name=document.getElementById('dash-join-name').value.trim();
   if(code.length<4){showErr('err-join','Introduce el código del grupo');return;}
   if(!name){showErr('err-join','Introduce tu nombre/apodo');return;}
+  if(!S.authEmail){showErr('err-join','Introduce tu email primero');return;}
   hideErr('err-join');
   const{data:grp,error:ge}=await sb.from('groups').select('*').eq('invite_code',code).single();
   if(ge||!grp){showErr('err-join','Código no encontrado ❌');return;}
-  // Check not already in group
-  const{data:ex}=await sb.from('users').select('id').eq('group_id',grp.id).eq('email',S.authEmail).single();
-  if(ex){toast('Ya eres miembro de este grupo','info');enterGroup(grp.id);return;}
-  const{data:nu,error:ue}=await sb.from('users').insert({group_id:grp.id,username:name,email:S.authEmail}).select().single();
+  // Check if already in group by email
+  const{data:byEmail}=await sb.from('users').select('id,username').eq('group_id',grp.id).eq('email',S.authEmail).maybeSingle();
+  if(byEmail){
+    // Already in group — just update username if changed and enter
+    if(byEmail.username!==name){
+      await sb.from('users').update({username:name}).eq('id',byEmail.id);
+    }
+    toast('✓ Bienvenido de nuevo a '+grp.name+'!');
+    await loadUserGroups();renderDashboard();return;
+  }
+  // Check if username taken by someone else
+  const{data:byName}=await sb.from('users').select('id,email').eq('group_id',grp.id).eq('username',name).maybeSingle();
+  if(byName){
+    // Username exists but with different email — assign our email to it
+    await sb.from('users').update({email:S.authEmail}).eq('id',byName.id);
+    toast('✓ Te has unido a '+grp.name+'!');
+    await loadUserGroups();renderDashboard();return;
+  }
+  // Fresh insert
+  const{error:ue}=await sb.from('users').insert({group_id:grp.id,username:name,email:S.authEmail});
   if(ue){showErr('err-join','Error: '+ue.message);return;}
-  toast('✓ Te has unido a '+grp.name+'!');
+  toast('✓ Te has unido a '+grp.name+'! 🎉');
   await loadUserGroups();renderDashboard();
 }
 async function createGroup(){
-  if(!S.authUid){toast('Inicia sesión primero','err');return;}
+  if(!S.authEmail){toast('Introduce tu email primero','err');return;}
   const gn=document.getElementById('dash-gname').value.trim();
   const un=document.getElementById('dash-uname').value.trim();
   const pin=document.getElementById('dash-pin').value;
@@ -628,14 +644,28 @@ async function enterGroup(groupId){
 function switchGroup(){stopRT();stopLive();adminAuthed=false;clearGroupSess();showScreen('dashboard');}
 async function loadUserGroups(){
   if(!S.authEmail)return;
-  const{data}=await sb.from('users')
-    .select('id,username,group_id,groups(id,name,invite_code,admin_id,admin_pin)')
+  // Step 1: get user rows for this email
+  const{data:urows,error:ue}=await sb.from('users')
+    .select('id,username,group_id')
     .eq('email',S.authEmail);
-  S.userGroups=(data||[]).map(u=>({
-    user_id:u.id,username:u.username,group_id:u.group_id,
-    group_name:u.groups?.name,group_code:u.groups?.invite_code,
-    is_admin:u.groups?.admin_id===u.id,admin_pin:u.groups?.admin_pin
-  }));
+  if(ue){console.error('loadUserGroups users error:',ue);return;}
+  if(!urows||!urows.length){S.userGroups=[];return;}
+  // Step 2: get the groups
+  const groupIds=urows.map(u=>u.group_id);
+  const{data:grows,error:ge}=await sb.from('groups')
+    .select('id,name,invite_code,admin_id,admin_pin')
+    .in('id',groupIds);
+  if(ge){console.error('loadUserGroups groups error:',ge);return;}
+  // Step 3: merge
+  S.userGroups=urows.map(u=>{
+    const g=(grows||[]).find(g=>g.id===u.group_id)||{};
+    return{
+      user_id:u.id,username:u.username,group_id:u.group_id,
+      group_name:g.name||'?',group_code:g.invite_code||'?',
+      is_admin:g.admin_id===u.id,admin_pin:g.admin_pin||''
+    };
+  });
+  console.log('loadUserGroups:',S.userGroups.length,'grupos para',S.authEmail);
 }
 
 // INIT
