@@ -186,40 +186,43 @@ header p{color:var(--mut);font-size:10px;margin-top:3px;letter-spacing:2px;text-
 .rtag{font-size:9px;padding:2px 5px;border-radius:20px;background:var(--bor);color:var(--mut)}
 .rtag.m{background:rgba(74,144,217,.15);color:var(--blue)}.rtag.f{background:rgba(124,92,191,.15);color:var(--acc)}
 
-/* BRACKET VISUAL */
-.bracket-section{margin-bottom:16px}
+/* BRACKET — grupos */
 .bracket-groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:7px;margin-bottom:12px}
 .bg-card{background:var(--card);border:1px solid var(--bor);border-radius:10px;padding:9px}
 .bg-title{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;color:var(--gold);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
 .bg-title .prog{font-size:9px;color:var(--mut);font-family:'Outfit',sans-serif;font-weight:600}
-.bg-team{display:flex;align-items:center;justify-content:space-between;padding:3px 5px;border-radius:5px;margin-bottom:2px;font-size:11px;font-weight:500;transition:background .15s}
-.bg-team:hover{background:var(--sur)}
+.bg-team{display:flex;align-items:center;justify-content:space-between;padding:3px 5px;border-radius:5px;margin-bottom:2px;font-size:11px;font-weight:500}
 .bg-team.leader{background:rgba(245,200,66,.07)}
 .bg-team .pts{font-family:'Bebas Neue',sans-serif;font-size:12px;color:var(--mut)}
 .bg-team.leader .pts{color:var(--gold)}
 
-/* KO BRACKET VISUAL */
-.ko-bracket{overflow-x:auto;padding:4px 0 10px}
-.ko-round{margin-bottom:14px}
-.ko-round-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--acc);margin-bottom:8px;padding-left:2px;display:flex;align-items:center;gap:8px}
+/* BRACKET KO — vertical mobile-first */
+.ko-round{margin-bottom:16px}
+.ko-round-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--acc);margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .ko-round-title::after{content:'';flex:1;height:1px;background:var(--bor)}
-.ko-matches{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:7px}
-.ko-match{background:var(--card);border:1px solid var(--bor);border-radius:10px;overflow:hidden;transition:border-color .2s}
-.ko-match:hover{border-color:var(--acc)}
+.ko-matches{display:flex;flex-direction:column;gap:6px}
+/* 2 columns on wider screens */
+@media(min-width:540px){.ko-matches{display:grid;grid-template-columns:1fr 1fr;gap:7px}}
+
+/* KO match card — horizontal layout */
+.ko-match{background:var(--card);border:1px solid var(--bor);border-radius:10px;overflow:hidden}
 .ko-match.fin{border-color:rgba(46,204,113,.3)}
-.ko-match.lv{border-color:var(--red);animation:lb 2s infinite}
-@keyframes lb{0%,100%{border-color:rgba(231,76,60,.8)}50%{border-color:rgba(231,76,60,.2)}}
-.ko-match-header{background:var(--sur);padding:4px 9px;display:flex;align-items:center;justify-content:space-between;font-size:9px;color:var(--mut)}
-.ko-match-header .date{color:var(--mut)}
-.ko-match-header .venue{color:var(--mut);font-size:8px;text-align:right;flex:1;padding-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ko-team-row{display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bor)}
-.ko-team-row:last-of-type{border-bottom:none}
-.ko-team-name{flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ko-team-name.tbd-name{color:var(--mut);font-style:italic;font-weight:400}
-.ko-team-score{font-family:'Bebas Neue',sans-serif;font-size:20px;min-width:28px;text-align:center;color:var(--mut)}
-.ko-team-score.winner{color:var(--gold)}
-.ko-team-row.winner-row .ko-team-name{color:var(--gold)}
-.ko-live-badge{font-size:8px;background:var(--red);color:#fff;padding:1px 6px;border-radius:20px;font-weight:700;animation:pu 1s infinite;margin-right:4px}
+.ko-match.lv{border-color:var(--red);animation:lborder 2s infinite}
+@keyframes lborder{0%,100%{border-color:rgba(231,76,60,.8)}50%{border-color:rgba(231,76,60,.2)}}
+.ko-match-header{background:var(--sur);padding:3px 9px;display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mut)}
+.ko-match-body{display:flex;align-items:stretch}
+.ko-teams{flex:1;min-width:0}
+.ko-team-row{display:flex;align-items:center;padding:6px 10px;gap:6px;border-bottom:1px solid rgba(255,255,255,.04)}
+.ko-team-row:last-child{border-bottom:none}
+.ko-flag{font-size:16px;flex-shrink:0;width:22px}
+.ko-team-name{flex:1;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ko-team-name.tbd{color:var(--mut);font-style:italic;font-weight:400;font-size:10px}
+.ko-scores{display:flex;flex-direction:column;background:var(--bg);min-width:36px}
+.ko-score{flex:1;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--mut);border-bottom:1px solid rgba(255,255,255,.04)}
+.ko-score:last-child{border-bottom:none}
+.ko-score.win{color:var(--gold);background:rgba(245,200,66,.07)}
+.ko-team-row.win-row .ko-team-name{color:var(--gold)}
+.ko-live-tag{font-size:8px;background:var(--red);color:#fff;padding:1px 5px;border-radius:20px;font-weight:700;animation:pu 1s infinite}
 
 .ab{background:var(--card);border:1px solid rgba(231,76,60,.2);border-radius:11px;padding:11px;margin-bottom:8px}
 .ab h3{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;color:var(--red);margin-bottom:9px;display:flex;align-items:center;gap:5px}
@@ -1065,6 +1068,107 @@ function renderBracketGroups(){
 }
 function renderBracketKO(){
   const el=document.getElementById('bracketKO');if(!el)return;
+  const phases=[
+    {key:'Final',label:'Final',icon:'🏆'},
+    {key:'Semis',label:'Semifinales',icon:'⭐'},
+    {key:'Cuartos',label:'Cuartos de Final',icon:'🔥'},
+    {key:'Octavos',label:'Octavos de Final',icon:'⚔️'},
+    {key:'R32',label:'Ronda de 32',icon:'⚡'},
+  ];
+
+  function getPhaseMatches(ph){
+    const ms=S.matches.filter(m=>m.phase===ph);
+    if(ph==='R32'&&!ms.length){
+      return R32_DEFS.map(r=>({
+        id:'r'+r.num,home:r.h,away:r.a,
+        status:'SCHEDULED',home_score:null,away_score:null,
+        match_date:null,stadium:r.venue,_date:r.date,_time:r._time
+      }));
+    }
+    return ms;
+  }
+
+  function koMatchHTML(m){
+    const fin=m.status==='FINISHED',live=m.status==='IN_PLAY';
+    const wH=fin&&m.home_score>m.away_score;
+    const wA=fin&&m.away_score>m.home_score;
+    const tbdH=isTBD(m.home),tbdA=isTBD(m.away);
+    const sh=fin||live?(m.home_score??'—'):'—';
+    const sa=fin||live?(m.away_score??'—'):'—';
+    // Extract flag emoji (first chars before space)
+    const flagH=tbdH?'❓':m.home.split(' ')[0];
+    const flagA=tbdA?'❓':m.away.split(' ')[0];
+    const nameH=tbdH?m.home:(m.home.split(' ').slice(1).join(' ')||m.home);
+    const nameA=tbdA?m.away:(m.away.split(' ').slice(1).join(' ')||m.away);
+    const d=m.match_date
+      ?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short',timeZone:'Europe/Madrid'})
+        +' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'})+'h'
+      :(m._date?m._date+(m._time?' '+m._time+'h':''):'');
+    const border=fin?'ko-match fin':live?'ko-match lv':'ko-match';
+    return`<div class="${border}">
+      <div class="ko-match-header">
+        ${live?'<span class="ko-live-tag">🔴 VIVO</span>':''}
+        <span>${d}</span>
+        <span style="flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:6px;color:var(--mut)">${m.stadium||''}</span>
+      </div>
+      <div class="ko-match-body">
+        <div class="ko-teams">
+          <div class="ko-team-row${wH?' win-row':''}">
+            <span class="ko-flag">${flagH}</span>
+            <span class="ko-team-name${tbdH?' tbd':''}">${nameH}</span>
+          </div>
+          <div class="ko-team-row${wA?' win-row':''}">
+            <span class="ko-flag">${flagA}</span>
+            <span class="ko-team-name${tbdA?' tbd':''}">${nameA}</span>
+          </div>
+        </div>
+        <div class="ko-scores">
+          <div class="ko-score${wH?' win':''}">${sh}</div>
+          <div class="ko-score${wA?' win':''}">${sa}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const parts=phases.map(ph=>{
+    const ms=getPhaseMatches(ph.key);
+    if(!ms.length)return'';
+    return`<div class="ko-round">
+      <div class="ko-round-title">${ph.icon} ${ph.label}</div>
+      <div class="ko-matches">${ms.map(koMatchHTML).join('')}</div>
+    </div>`;
+  }).filter(Boolean);
+
+  el.innerHTML=parts.join('')||'<div class="empty"><div class="ic">⚽</div><p>Bracket disponible al empezar la fase eliminatoria</p></div>';
+}
+
+
+function renderBracketGroups(){
+  const el=document.getElementById('bracketGroups');if(!el)return;
+  el.innerHTML=GROUPS.map(g=>{
+    const gMs=S.matches.filter(m=>m.phase==='Grupos'&&m.group_code===g);
+    const stats={};
+    gMs.forEach(m=>{
+      [m.home,m.away].forEach(t=>{if(!stats[t])stats[t]={p:0,pts:0,gf:0,ga:0};});
+      if(m.status==='FINISHED'&&m.home_score!==null){
+        stats[m.home].p++;stats[m.away].p++;
+        stats[m.home].gf+=m.home_score;stats[m.home].ga+=m.away_score;
+        stats[m.away].gf+=m.away_score;stats[m.away].ga+=m.home_score;
+        if(m.home_score>m.away_score)stats[m.home].pts+=3;
+        else if(m.away_score>m.home_score)stats[m.away].pts+=3;
+        else{stats[m.home].pts+=1;stats[m.away].pts+=1;}
+      }
+    });
+    const sorted=Object.entries(stats).sort((a,b)=>{if(b[1].pts!==a[1].pts)return b[1].pts-a[1].pts;return(b[1].gf-b[1].ga)-(a[1].gf-a[1].ga);});
+    const played=gMs.filter(m=>m.status==='FINISHED').length;
+    return`<div class="bg-card">
+      <div class="bg-title">GR ${g} <span class="prog">${played}/${gMs.length}</span></div>
+      ${sorted.map(([t,s],i)=>`<div class="bg-team ${i<2?'leader':''}"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:85px">${t}</span><span class="pts">${s.pts}</span></div>`).join('')||'<div style="font-size:9px;color:var(--mut);padding:3px">Sin resultados</div>'}
+    </div>`;
+  }).join('');
+}
+function renderBracketKO(){
+  const el=document.getElementById('bracketKO');if(!el)return;
   // Build visual bracket with boxes and lines
   const phases=['R32','Octavos','Cuartos','Semis','Final'];
   const phaseLabels={R32:'Ronda de 32',Octavos:'Octavos',Cuartos:'Cuartos',Semis:'Semis',Final:'Final'};
@@ -1384,7 +1488,8 @@ async function showTournamentDetail(tournamentId){
   const{data:ms}=await sb.from('matches').select('*')
     .eq('tournament_id',tournamentId).eq('status','FINISHED')
     .order('match_date');
-  const{data:tr}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single();
+  // Try to get tournament results for this group+tournament, or global
+  const{data:tr}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single().catch(()=>({data:null}));
   // Stats
   const totalGoals=(ms||[]).reduce((s,m)=>s+(m.home_score||0)+(m.away_score||0),0);
   const totalMatches=(ms||[]).length;
