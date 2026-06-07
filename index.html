@@ -685,13 +685,15 @@ async function initApp(){
   document.getElementById('tournament-badge').textContent=S.tournament?.emoji+' '+S.tournament?.short_name||'';
   setSS('sync','Cargando...');
   await loadTournament();await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
-  renderAll();setSS('ok','Sincronizado');startRT();startLive();preloadPlayers();
+  // Load players FIRST, then render forms that depend on them
+  setSS('sync','Cargando jugadores...');
+  await loadAllPlayersFromDB();
+  renderAll();
+  setSS('ok','Sincronizado');
+  startRT();startLive();
 }
 function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();renderFinalPredsForm();}
-async function preloadPlayers(){
-  // Pre-load all players from DB for faster fantasy form
-  await loadAllPlayersFromDB();
-}
+// players loaded in initApp before renderAll
 
 // DATA
 async function loadTournament(){
@@ -961,6 +963,11 @@ async function saveFinalPreds(){
 
 async function renderFinalPredsForm(){
   const card=document.getElementById('fp-card-content');if(!card)return;
+  // Ensure players loaded
+  if(!S._allPlayers||!S._allPlayers.length){
+    card.innerHTML='<div style="text-align:center;padding:16px;color:var(--mut);font-size:12px">⏳ Cargando...</div>';
+    await loadAllPlayersFromDB();
+  }
   // Build team list from matches (unique teams in this tournament)
   const teams=[...new Set(S.matches
     .filter(m=>m.phase==='Grupos'&&!isTBD(m.home)&&!isTBD(m.away))
@@ -1154,8 +1161,8 @@ function renderBracketKO(){
 function renderFantasyForm(){
   const f=S.fantasy,locked=f?.locked,unl=f?.unlocked_by_admin;
   const area=document.getElementById('fantasyForm');if(!area)return;
-  // Show loading spinner if players not yet loaded
-  if(!S._allPlayers&&!locked){
+  // If somehow players not loaded yet, load them now
+  if((!S._allPlayers||!S._allPlayers.length)&&!locked){
     area.innerHTML='<div style="text-align:center;padding:16px;color:var(--mut);font-size:12px">⏳ Cargando jugadores...</div>';
     loadAllPlayersFromDB().then(()=>renderFantasyForm());
     return;
@@ -1244,12 +1251,12 @@ async function loadPlayersFromDB(team){
 }
 async function loadAllPlayersFromDB(){
   if(S._allPlayers&&S._allPlayers.length)return S._allPlayers;
-  let q=sb.from('players').select('*').order('team').order('position').order('number');
+  let q=sb.from('players').select('number,name,position,team').order('team').order('position').order('number');
   if(S.tournamentId)q=q.eq('tournament_id',S.tournamentId);
   const{data,error}=await q;
-  if(error)console.error('loadAllPlayersFromDB error:',error);
+  if(error){console.error('loadAllPlayersFromDB:',error.message);S._allPlayers=[];return[];}
   S._allPlayers=data||[];
-  console.log('Players loaded:',S._allPlayers.length);
+  console.log('Players loaded from DB:',S._allPlayers.length,'for tournament:',S.tournamentId);
   return S._allPlayers;
 }
 async function saveFantasy(){
