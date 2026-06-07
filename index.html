@@ -256,39 +256,22 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   <p>Apuestas entre amigos · USA · México · Canadá</p>
 </header>
 
-<!-- ── AUTH (Email OTP) ── -->
+<!-- ── AUTH (Email directo, sin verificación) ── -->
 <div class="screen active" id="screen-auth">
   <div class="auth-card">
-    <div style="font-size:36px;text-align:center;margin-bottom:8px">🏆</div>
+    <div style="font-size:40px;text-align:center;margin-bottom:10px;filter:drop-shadow(0 0 12px rgba(245,200,66,.5))">🏆</div>
     <h2 style="text-align:center">Mundial 2026</h2>
-    <div class="sub" style="text-align:center;margin-bottom:20px">Entra con tu email para unirte a la quiniela</div>
-    
-    <div id="auth-step-email">
-      <div class="aerr" id="err-email"></div>
-      <div class="field">
-        <label>Tu email</label>
-        <input id="auth-email" type="email" placeholder="tucorreo@gmail.com" autocomplete="email" inputmode="email"
-          onkeydown="if(event.key==='Enter')sendMagicLink()">
-      </div>
-      <button class="btn g" style="width:100%;margin-top:4px" id="btn-magic" onclick="sendMagicLink()">Enviar enlace →</button>
-      <p style="font-size:10px;color:var(--mut);text-align:center;margin-top:10px">
-        Te enviamos un enlace al email. Pulsa el enlace y entras directamente. Sin contraseña, sin código.
-      </p>
+    <div class="sub" style="text-align:center;margin-bottom:22px">Introduce tu email para entrar</div>
+    <div class="aerr" id="err-email"></div>
+    <div class="field">
+      <label>Tu email</label>
+      <input id="auth-email" type="email" placeholder="tucorreo@gmail.com" autocomplete="email" inputmode="email"
+        onkeydown="if(event.key==='Enter')loginWithEmail()">
     </div>
-
-    <div id="auth-step-sent" style="display:none">
-      <div style="text-align:center;padding:10px 0">
-        <div style="font-size:40px;margin-bottom:10px">📬</div>
-        <div style="font-size:14px;font-weight:600;color:var(--txt);margin-bottom:6px">Enlace enviado</div>
-        <div style="font-size:12px;color:var(--mut);margin-bottom:4px">Revisa tu bandeja de entrada en</div>
-        <div id="auth-email-shown" style="font-size:13px;color:var(--gold);font-weight:700;margin-bottom:14px"></div>
-        <div style="font-size:11px;color:var(--mut);background:var(--sur);border-radius:8px;padding:10px">
-          Pulsa el enlace del email para entrar.<br>
-          <span style="color:var(--mut);font-size:10px">Revisa también en spam si no aparece.</span>
-        </div>
-      </div>
-      <button class="btn p" style="width:100%;margin-top:12px;font-size:11px" onclick="backToEmail()">← Cambiar email</button>
-    </div>
+    <button class="btn g" style="width:100%;margin-top:6px;padding:11px" onclick="loginWithEmail()">Entrar →</button>
+    <p style="font-size:10px;color:var(--mut);text-align:center;margin-top:10px">
+      Tu email es tu identidad. No necesitas contraseña ni verificación.
+    </p>
   </div>
 </div>
 
@@ -586,8 +569,14 @@ const R32_DEFS=[
 
 let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null,_players:{},authUid:null,authEmail:'',userGroups:[],tournament:null,tournamentId:null};
 
-function saveSess(){localStorage.setItem('mw26s',JSON.stringify({groupId:S.groupId,groupName:S.groupName,groupCode:S.groupCode,adminPin:S.adminPin,userId:S.userId,userName:S.userName,isAdmin:S.isAdmin,authUid:S.authUid,authEmail:S.authEmail}));}
-function loadSess(){const r=localStorage.getItem('mw26s');if(!r)return false;Object.assign(S,JSON.parse(r));return !!(S.authUid&&S.userId&&S.groupId);}
+function saveSess(){localStorage.setItem('mw26s',JSON.stringify({groupId:S.groupId,groupName:S.groupName,groupCode:S.groupCode,adminPin:S.adminPin,userId:S.userId,userName:S.userName,isAdmin:S.isAdmin,authEmail:S.authEmail}));}
+function loadSess(){
+  const r=localStorage.getItem('mw26s');if(!r)return false;
+  const d=JSON.parse(r);Object.assign(S,d);
+  // Reconstruct authUid from email if needed
+  if(S.authEmail&&!S.authUid)S.authUid=btoa(S.authEmail);
+  return !!(S.authEmail&&S.userId&&S.groupId);
+}
 function clearGroupSess(){const keep={authUid:S.authUid,authEmail:S.authEmail};Object.assign(S,{groupId:null,userId:null,groupName:'',groupCode:'',adminPin:'',isAdmin:false});Object.assign(S,keep);localStorage.removeItem('mw26s');}
 
 // AUTH
@@ -602,9 +591,9 @@ async function joinGroup(){
   const{data:grp,error:ge}=await sb.from('groups').select('*').eq('invite_code',code).single();
   if(ge||!grp){showErr('err-join','Código no encontrado ❌');return;}
   // Check not already in group
-  const{data:ex}=await sb.from('users').select('id').eq('group_id',grp.id).eq('auth_uid',S.authUid).single();
+  const{data:ex}=await sb.from('users').select('id').eq('group_id',grp.id).eq('email',S.authEmail).single();
   if(ex){toast('Ya eres miembro de este grupo','info');enterGroup(grp.id);return;}
-  const{data:nu,error:ue}=await sb.from('users').insert({group_id:grp.id,username:name,auth_uid:S.authUid,email:S.authEmail}).select().single();
+  const{data:nu,error:ue}=await sb.from('users').insert({group_id:grp.id,username:name,email:S.authEmail}).select().single();
   if(ue){showErr('err-join','Error: '+ue.message);return;}
   toast('✓ Te has unido a '+grp.name+'!');
   await loadUserGroups();renderDashboard();
@@ -620,7 +609,7 @@ async function createGroup(){
   hideErr('err-create');
   const{data:grp,error:ge}=await sb.from('groups').insert({name:gn,admin_pin:pin,admin_email:S.authEmail}).select().single();
   if(ge){showErr('err-create','Error: '+ge.message);return;}
-  const{data:user,error:ue}=await sb.from('users').insert({group_id:grp.id,username:un,auth_uid:S.authUid,email:S.authEmail}).select().single();
+  const{data:user,error:ue}=await sb.from('users').insert({group_id:grp.id,username:un,email:S.authEmail}).select().single();
   if(ue){showErr('err-create','Error: '+ue.message);return;}
   await sb.from('groups').update({admin_id:user.id}).eq('id',grp.id);
   toast('¡Grupo '+grp.name+' creado! 🎉');
@@ -638,9 +627,15 @@ async function enterGroup(groupId){
 }
 function switchGroup(){stopRT();stopLive();adminAuthed=false;clearGroupSess();showScreen('dashboard');}
 async function loadUserGroups(){
-  if(!S.authUid)return;
-  const{data}=await sb.from('users').select('id,username,group_id,groups(id,name,invite_code,admin_id,admin_pin)').eq('auth_uid',S.authUid);
-  S.userGroups=(data||[]).map(u=>({user_id:u.id,username:u.username,group_id:u.group_id,group_name:u.groups?.name,group_code:u.groups?.invite_code,is_admin:u.groups?.admin_id===u.id,admin_pin:u.groups?.admin_pin}));
+  if(!S.authEmail)return;
+  const{data}=await sb.from('users')
+    .select('id,username,group_id,groups(id,name,invite_code,admin_id,admin_pin)')
+    .eq('email',S.authEmail);
+  S.userGroups=(data||[]).map(u=>({
+    user_id:u.id,username:u.username,group_id:u.group_id,
+    group_name:u.groups?.name,group_code:u.groups?.invite_code,
+    is_admin:u.groups?.admin_id===u.id,admin_pin:u.groups?.admin_pin
+  }));
 }
 
 // INIT
@@ -1258,8 +1253,9 @@ function showScreen(id){
   document.getElementById('screen-'+id).classList.add('active');
   if(id==='dashboard')renderDashboard();
   if(id==='auth'){
-    document.getElementById('auth-step-email').style.display='';
-    document.getElementById('auth-step-sent').style.display='none';
+    const el=document.getElementById('auth-email');
+    if(el){el.value='';el.focus();}
+    hideErr('err-email');
   }
 }
 function setSS(t,msg){document.getElementById('sdot').className='sdot '+(t==='ok'?'ok':t==='err'?'err':'sync');document.getElementById('sstatus').textContent=msg;}
@@ -1273,33 +1269,21 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 
 
 // ── EMAIL OTP AUTH ────────────────────────────────────────────────
-async function sendMagicLink(){
+async function loginWithEmail(){
   const email=document.getElementById('auth-email').value.trim().toLowerCase();
   if(!email||!email.includes('@')){showErr('err-email','Introduce un email válido');return;}
   hideErr('err-email');
-  const btn=document.getElementById('btn-magic');
-  btn.disabled=true;btn.textContent='Enviando...';
-  // Redirect back to this same page after clicking the magic link
-  const redirectTo=window.location.origin+window.location.pathname;
-  const{error}=await sb.auth.signInWithOtp({
-    email,
-    options:{shouldCreateUser:true, emailRedirectTo:redirectTo}
-  });
-  btn.disabled=false;btn.textContent='Enviar enlace →';
-  if(error){showErr('err-email','Error: '+error.message);return;}
-  document.getElementById('auth-email-shown').textContent=email;
-  document.getElementById('auth-step-email').style.display='none';
-  document.getElementById('auth-step-sent').style.display='';
+  // Simple email-as-identity: store email, load user groups
+  S.authEmail=email;
+  S.authUid=btoa(email); // deterministic ID from email (no real auth needed)
+  localStorage.setItem('mw26_email',email);
+  await loadUserGroups();
+  showScreen('dashboard');
 }
-function backToEmail(){
-  document.getElementById('auth-step-email').style.display='';
-  document.getElementById('auth-step-sent').style.display='none';
-  hideErr('err-email');
-}
-async function signOut(){
-  await sb.auth.signOut();
+function signOut(){
   S.authUid=null;S.authEmail='';S.userGroups=[];
   localStorage.removeItem('mw26s');
+  localStorage.removeItem('mw26_email');
   showScreen('auth');
 }
 
@@ -1342,11 +1326,11 @@ function renderDashboard(){
 
 // ── BOOT ──────────────────────────────────────────────────────
 (async()=>{
-  // Check if user is logged in via Supabase Auth
-  const{data:{session}}=await sb.auth.getSession();
-  if(session?.user){
-    S.authUid=session.user.id;
-    S.authEmail=session.user.email;
+  // Check localStorage for saved email (no server auth needed)
+  const savedEmail=localStorage.getItem('mw26_email');
+  if(savedEmail){
+    S.authEmail=savedEmail;
+    S.authUid=btoa(savedEmail);
     await loadUserGroups();
     if(loadSess()&&S.groupId){
       await initApp();
@@ -1356,18 +1340,6 @@ function renderDashboard(){
   }else{
     showScreen('auth');
   }
-  // Listen for auth changes (OTP verification)
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session?.user){
-      S.authUid=session.user.id;
-      S.authEmail=session.user.email;
-      await loadUserGroups();
-      showScreen('dashboard');
-    }else if(event==='SIGNED_OUT'){
-      S.authUid=null;S.authEmail='';S.userGroups=[];
-      showScreen('auth');
-    }
-  });
 })();
 </script>
 <!-- iOS INSTALL MODAL -->
