@@ -356,6 +356,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button onclick="showPanel('bracket',this)">🏟 Bracket</button>
     <button onclick="showPanel('fantasy',this)">⚽ Fantasy</button>
     <button onclick="showPanel('stats',this)">📊 Stats</button>
+    <button onclick="showPanel('historial',this)">🕒 Historial</button>
     <button onclick="showPanel('ranking',this)">🏅 Ranking</button>
     <button onclick="showPanel('admin',this)">🔧 Admin</button>
   </nav>
@@ -392,13 +393,8 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     </div>
     <div id="matchesList"></div>
     <div class="stitle">🏆 Predicciones del Torneo</div>
-    <div class="fp-card">
-      <h3>¿Quién va a ganar?</h3>
-      <div class="pf"><label>🥇 Campeón</label><input id="fp-champ" type="text" placeholder="Ej: España"></div>
-      <div class="pf"><label>🥈 Subcampeón</label><input id="fp-runner" type="text" placeholder="Ej: Brasil"></div>
-      <div class="pf"><label>👟 Máx. Goleador</label><input id="fp-scorer" type="text" placeholder="Ej: Mbappé"></div>
-      <div class="pf"><label>🌟 MVP</label><input id="fp-mvp" type="text" placeholder="Ej: Vinicius Jr"></div>
-      <button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">Guardar predicciones</button>
+    <div class="fp-card" id="fp-card-content">
+      <div class="empty"><div class="ic">⏳</div><p>Cargando...</p></div>
     </div>
     <div class="normas-card">
       <h3>📋 Normas de puntuación</h3>
@@ -454,6 +450,16 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div id="statsContent"></div>
   </div>
 
+  <!-- HISTORIAL -->
+  <div class="panel" id="panel-historial">
+    <div class="stitle">🕒 Historial de Torneos</div>
+    <div class="itabs" id="hist-tabs">
+      <button class="it active" onclick="showHistorial('torneos',this)">🏆 Torneos</button>
+      <button class="it" onclick="showHistorial('resultados',this)">⚽ Resultados</button>
+    </div>
+    <div id="historialContent"></div>
+  </div>
+
   <!-- RANKING -->
   <div class="panel" id="panel-ranking">
     <div class="stitle">🏅 Clasificación Global</div>
@@ -489,14 +495,17 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
         <div id="adminMatches"></div>
       </div>
       <div class="ab">
-        <h3>🏆 Datos Finales del Torneo</h3>
-        <div class="pf"><label>🥇 Campeón real</label><input id="tr-champ" type="text"></div>
-        <div class="pf"><label>🥈 Subcampeón real</label><input id="tr-runner" type="text"></div>
-        <div class="pf"><label>👟 Máx. Goleador</label><input id="tr-scorer" type="text"></div>
-        <div class="pf"><label>🌟 MVP</label><input id="tr-mvp" type="text"></div>
-        <div class="pf"><label>🏆 Equipos en Cuartos</label><input id="tr-quarters" type="text" placeholder="España,Brasil..."></div>
-        <div class="pf"><label>🏆 Equipos en Semis</label><input id="tr-semis" type="text"></div>
-        <button class="btn g" style="margin-top:7px" onclick="saveTR()">Guardar y recalcular</button>
+        <h3>🏆 Datos del Torneo</h3>
+        <p style="color:var(--mut);font-size:11px;margin-bottom:9px">
+          Campeón, cuartos y semis se calculan <strong style="color:var(--green)">automáticamente</strong> desde los resultados.
+          Solo necesitas introducir MVP y Máx. Goleador si la API no los tiene.
+        </p>
+        <div id="tr-auto-status" style="background:var(--bg);border-radius:7px;padding:8px;margin-bottom:9px;font-size:11px"></div>
+        <div class="pf"><label>👟 Máx. Goleador (manual)</label><input id="tr-scorer" type="text" placeholder="Solo si no sale automático"></div>
+        <div class="pf"><label>🌟 MVP (manual)</label><input id="tr-mvp" type="text" placeholder="Solo si no sale automático"></div>
+        <input type="hidden" id="tr-champ"><input type="hidden" id="tr-runner">
+        <input type="hidden" id="tr-quarters"><input type="hidden" id="tr-semis">
+        <button class="btn g" style="margin-top:7px" onclick="saveTR()">Guardar</button>
       </div>
       <div class="ab"><h3>🎯 Goles Fantasy</h3><div id="adminGoals"></div></div>
     </div>
@@ -678,7 +687,7 @@ async function initApp(){
   await loadTournament();await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
   renderAll();setSS('ok','Sincronizado');startRT();startLive();preloadPlayers();
 }
-function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();}
+function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();renderFinalPredsForm();}
 async function preloadPlayers(){
   // Pre-load all players from DB for faster fantasy form
   await loadAllPlayersFromDB();
@@ -695,12 +704,61 @@ async function loadMatches(){
   const{data}=await q;S.matches=data||[];
 }
 async function loadPreds(){const{data}=await sb.from('predictions').select('*').eq('user_id',S.userId);S.preds={};(data||[]).forEach(p=>{S.preds[p.match_id]={home:p.home_pred,away:p.away_pred};});}
-async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};if(data){const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('fp-champ',data.champion);s('fp-runner',data.runner_up);s('fp-scorer',data.top_scorer);s('fp-mvp',data.mvp);}}
+async function loadFinalPreds(){
+  const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();
+  S.finalPreds=data||{};
+}
 async function loadFantasy(){const{data}=await sb.from('fantasy').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.fantasy=data||null;}
 async function loadAllUsers(){const{data}=await sb.from('users').select('*').eq('group_id',S.groupId);S.allUsers=data||[];}
 async function loadAllFantasy(){const{data}=await sb.from('fantasy').select('*').eq('group_id',S.groupId);S.allFantasy=data||[];}
 async function loadAllFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('group_id',S.groupId);S.allFinalPreds=data||[];}
-async function loadTR(){const{data}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single();S.tr=data||null;}
+async function loadTR(){
+  // Load manually saved overrides (MVP, top scorer if not in API)
+  const{data}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single();
+  S.tr=data||{};
+  // Auto-compute from matches (overrides manual only if match data exists)
+  computeTRFromMatches();
+}
+function computeTRFromMatches(){
+  const tr=S.tr||{};
+  const finished=S.matches.filter(m=>m.status==='FINISHED');
+  
+  // ── CAMPEÓN: ganador de la Final
+  const final=S.matches.find(m=>m.phase==='Final'&&m.status==='FINISHED'&&m.home_score!==null);
+  if(final){
+    const champion=final.home_score>final.away_score?final.home:final.away;
+    const runnerUp=final.home_score>final.away_score?final.away:final.home;
+    if(!isTBD(champion))tr.champion=champion;
+    if(!isTBD(runnerUp))tr.runner_up=runnerUp;
+  }
+  
+  // ── SEMIFINALISTAS: equipos que jugaron las semis
+  const semis=S.matches.filter(m=>m.phase==='Semis'&&!isTBD(m.home)&&!isTBD(m.away));
+  if(semis.length>=2){
+    const semiTeams=[...new Set(semis.flatMap(m=>[m.home,m.away]))].filter(t=>!isTBD(t));
+    if(semiTeams.length>=2)tr.semi_teams=semiTeams;
+  }else if(semis.length===1){
+    const t=[semis[0].home,semis[0].away].filter(t=>!isTBD(t));
+    if(t.length)tr.semi_teams=t;
+  }
+  
+  // ── CUARTOS: equipos que jugaron los cuartos
+  const qtr=S.matches.filter(m=>m.phase==='Cuartos'&&!isTBD(m.home)&&!isTBD(m.away));
+  if(qtr.length){
+    const qtrTeams=[...new Set(qtr.flatMap(m=>[m.home,m.away]))].filter(t=>!isTBD(t));
+    if(qtrTeams.length)tr.quarter_teams=qtrTeams;
+  }
+  
+  // ── MÁXIMO GOLEADOR: del fantasy (quien tenga más goles en player_goals)
+  // Solo si no está ya puesto manualmente
+  if(!tr.top_scorer&&S.allFantasy?.length){
+    const best=S.allFantasy.filter(f=>f.player&&f.player_goals>0)
+      .sort((a,b)=>(b.player_goals||0)-(a.player_goals||0))[0];
+    if(best)tr.top_scorer=best.player;
+  }
+  
+  S.tr=tr;
+}
 async function loadAllPreds(){const ids=S.allUsers.map(u=>u.id);if(!ids.length)return{};const{data}=await sb.from('predictions').select('*').in('user_id',ids);const m={};(data||[]).forEach(p=>{if(!m[p.user_id])m[p.user_id]={};m[p.user_id][p.match_id]={home:p.home_pred,away:p.away_pred};});return m;}
 
 // ── LIVE TIMER ────────────────────────────────────────────────────
@@ -724,7 +782,7 @@ async function doLiveFetch(){
   lastFetchTime=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   setSS('sync','↻ Actualizando...');
   await loadMatches();
-  renderLive();renderMatches();renderBracket();
+  computeTRFromMatches();renderLive();renderMatches();renderBracket();
   const live=S.matches.filter(m=>m.status==='IN_PLAY');
   setSS('ok','Act. '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}));
   updateDebug();
@@ -769,7 +827,7 @@ function startRT(){
   rtCh=sb.channel('mw26-'+S.groupId)
     .on('postgres_changes',{event:'*',schema:'public',table:'matches'},async()=>{
       setSS('sync','⚡ Cambio detectado...');await loadMatches();renderAll();renderRk(S.rkMode);renderFantasyRanking();
-      setSS('ok','⚡ Actualizado en tiempo real');liveSecs=REFRESH_SECS;updateTimerUI();dbLog('Realtime update recibido');
+      setSS('ok','⚡ Actualizado en tiempo real');computeTRFromMatches();liveSecs=REFRESH_SECS;updateTimerUI();dbLog('Realtime update recibido');
     })
     .on('postgres_changes',{event:'*',schema:'public',table:'fantasy',filter:'group_id=eq.'+S.groupId},async()=>{await loadFantasy();await loadAllFantasy();renderFantasyForm();renderFantasyRanking();})
     .subscribe();
@@ -886,8 +944,78 @@ async function savePred(mid,side,val){
   dbLog(`Pred saved: match ${mid} → ${p.home}-${p.away}`);
 }
 async function saveFinalPreds(){
-  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:document.getElementById('fp-champ').value.trim(),runner_up:document.getElementById('fp-runner').value.trim(),top_scorer:document.getElementById('fp-scorer').value.trim(),mvp:document.getElementById('fp-mvp').value.trim(),updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
-  if(error){toast('Error: '+error.message,'err');return;}await loadFinalPreds();toast('¡Predicciones guardadas! 🏆');
+  const champ=document.getElementById('fp-champ')?.value?.trim()||'';
+  const runner=document.getElementById('fp-runner')?.value?.trim()||'';
+  const scorer=document.getElementById('fp-scorer')?.value?.trim()||'';
+  const mvp=document.getElementById('fp-mvp')?.value?.trim()||'';
+  const{error}=await sb.from('final_predictions').upsert({
+    user_id:S.userId,group_id:S.groupId,
+    champion:champ,runner_up:runner,top_scorer:scorer,mvp:mvp,
+    updated_at:new Date().toISOString()
+  },{onConflict:'user_id,group_id'});
+  if(error){toast('Error: '+error.message,'err');return;}
+  await loadFinalPreds();
+  renderFinalPredsForm();
+  toast('¡Predicciones guardadas! 🏆');
+}
+
+async function renderFinalPredsForm(){
+  const card=document.getElementById('fp-card-content');if(!card)return;
+  // Build team list from matches (unique teams in this tournament)
+  const teams=[...new Set(S.matches
+    .filter(m=>m.phase==='Grupos'&&!isTBD(m.home)&&!isTBD(m.away))
+    .flatMap(m=>[m.home,m.away]))].sort();
+  // Build player list from DB
+  const players=S._allPlayers||[];
+  const fp=S.finalPreds||{};
+  const tr=S.tr||{};
+  // Check if tournament is over (has champion)
+  const isOver=!!tr.champion&&!isTBD(tr.champion);
+  const teamOpts=teams.map(t=>`<option value="${t}"${fp.champion===t?' selected':''}>${t}</option>`).join('');
+  const teamOpts2=teams.map(t=>`<option value="${t}"${fp.runner_up===t?' selected':''}>${t}</option>`).join('');
+  const playerOpts=players.map(p=>`<option value="${p.name}"${fp.top_scorer===p.name?' selected':''}>${p.number?'#'+p.number+' ':''}${p.name} (${p.team})</option>`).join('');
+  const playerOpts2=players.map(p=>`<option value="${p.name}"${fp.mvp===p.name?' selected':''}>${p.number?'#'+p.number+' ':''}${p.name} (${p.team})</option>`).join('');
+  // Scoring status
+  let scoreHtml='';
+  if(isOver){
+    const pts=calcQPts(S.userId);
+    scoreHtml=`<div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px">
+      <div style="color:var(--mut);margin-bottom:4px">Resultado del torneo:</div>
+      ${tr.champion?`<div>🥇 Campeón: <strong style="color:var(--gold)">${tr.champion}</strong> ${norm(fp.champion)===norm(tr.champion)?'<span style="color:var(--green)">✓ +10pts</span>':'<span style="color:var(--red)">✗</span>'}</div>`:''}
+      ${tr.runner_up?`<div>🥈 Subcampeón: <strong style="color:var(--gold)">${tr.runner_up}</strong> ${norm(fp.runner_up)===norm(tr.runner_up)?'<span style="color:var(--green)">✓ +6pts</span>':'<span style="color:var(--red)">✗</span>'}</div>`:''}
+      ${tr.top_scorer?`<div>👟 Goleador: <strong style="color:var(--gold)">${tr.top_scorer}</strong> ${norm(fp.top_scorer)===norm(tr.top_scorer)?'<span style="color:var(--green)">✓ +8pts</span>':'<span style="color:var(--red)">✗</span>'}</div>`:''}
+      ${tr.mvp?`<div>🌟 MVP: <strong style="color:var(--gold)">${tr.mvp}</strong> ${norm(fp.mvp)===norm(tr.mvp)?'<span style="color:var(--green)">✓ +5pts</span>':'<span style="color:var(--red)">✗</span>'}</div>`:''}
+    </div>`;
+  }
+  // Lock preds if tournament has started (first match date passed)
+  const firstMatch=S.matches.filter(m=>m.phase==='Grupos').sort((a,b)=>new Date(a.match_date)-new Date(b.match_date))[0];
+  const locked=firstMatch&&new Date(firstMatch.match_date)<=new Date();
+  card.innerHTML=`
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;margin-bottom:8px">¿Quién va a ganar?</h3>
+    ${scoreHtml}
+    ${locked&&!isOver?'<div style="font-size:11px;color:var(--red);margin-bottom:8px">🔒 El torneo ya ha empezado — no puedes cambiar tus predicciones</div>':''}
+    <div class="pf"><label>🥇 Campeón</label>
+      <select id="fp-champ" ${locked?'disabled':''}>
+        <option value="">— Elige —</option>${teamOpts}
+      </select>
+    </div>
+    <div class="pf"><label>🥈 Subcampeón</label>
+      <select id="fp-runner" ${locked?'disabled':''}>
+        <option value="">— Elige —</option>${teamOpts2}
+      </select>
+    </div>
+    <div class="pf"><label>👟 Máx. Goleador</label>
+      <select id="fp-scorer" ${locked?'disabled':''}>
+        <option value="">— Elige jugador —</option>${playerOpts}
+      </select>
+    </div>
+    <div class="pf"><label>🌟 MVP</label>
+      <select id="fp-mvp" ${locked?'disabled':''}>
+        <option value="">— Elige jugador —</option>${playerOpts2}
+      </select>
+    </div>
+    ${!locked?'<button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">Guardar predicciones</button>':''}
+  `;
 }
 
 // ── BRACKET VISUAL ────────────────────────────────────────────────
@@ -1115,11 +1243,13 @@ async function loadPlayersFromDB(team){
   return S._players[team];
 }
 async function loadAllPlayersFromDB(){
-  if(S._allPlayers)return S._allPlayers;
+  if(S._allPlayers&&S._allPlayers.length)return S._allPlayers;
   let q=sb.from('players').select('*').order('team').order('position').order('number');
   if(S.tournamentId)q=q.eq('tournament_id',S.tournamentId);
-  const{data}=await q;
+  const{data,error}=await q;
+  if(error)console.error('loadAllPlayersFromDB error:',error);
   S._allPlayers=data||[];
+  console.log('Players loaded:',S._allPlayers.length);
   return S._allPlayers;
 }
 async function saveFantasy(){
@@ -1171,6 +1301,108 @@ function calcFPts(uid){
 
 // NAV
 
+
+// ── HISTORIAL ─────────────────────────────────────────────────────
+let histMode='torneos';
+async function showHistorial(mode,btn){
+  histMode=mode;
+  document.querySelectorAll('#hist-tabs .it').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  await renderHistorial();
+}
+async function renderHistorial(){
+  const el=document.getElementById('historialContent');if(!el)return;
+  el.innerHTML='<div class="empty"><div class="ic">⏳</div><p>Cargando...</p></div>';
+  if(histMode==='torneos'){
+    // List all tournaments
+    const{data:tourneys}=await sb.from('tournaments').select('*').order('api_season',{ascending:false});
+    if(!tourneys?.length){el.innerHTML='<div class="empty"><div class="ic">🏆</div><p>No hay torneos registrados</p></div>';return;}
+    el.innerHTML=tourneys.map(t=>{
+      const isActive=t.active;
+      return`<div class="rc" style="${isActive?'border-color:rgba(245,200,66,.4);':''}" onclick="showTournamentDetail('${t.id}')">
+        <div style="font-size:28px;flex-shrink:0">${t.emoji||'🏆'}</div>
+        <div style="flex:1">
+          <div class="rn">${t.name}</div>
+          <div class="rs">${t.api_season||''} ${isActive?'<span style="color:var(--green);font-weight:700">● EN CURSO</span>':''}</div>
+        </div>
+        <div style="color:var(--mut);font-size:18px">›</div>
+      </div>`;
+    }).join('');
+  }else{
+    // Show results of active tournament grouped by phase
+    const phases=['Final','Semis','Cuartos','Octavos','R32','Grupos'];
+    const finished=S.matches.filter(m=>m.status==='FINISHED');
+    if(!finished.length){el.innerHTML='<div class="empty"><div class="ic">⚽</div><p>Aún no hay resultados</p></div>';return;}
+    let html='';
+    phases.forEach(ph=>{
+      const ms=finished.filter(m=>m.phase===ph);
+      if(!ms.length)return;
+      html+=`<div class="stitle" style="font-size:15px">${ph==='Grupos'?'Fase de Grupos':ph==='R32'?'Ronda de 32':ph==='Octavos'?'Octavos de Final':ph==='Cuartos'?'Cuartos de Final':ph==='Semis'?'Semifinales':'🏆 Final'}</div>`;
+      html+=ms.map(m=>{
+        const wH=m.home_score>m.away_score,wA=m.away_score>m.home_score;
+        const d=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short',timeZone:'Europe/Madrid'}):'';
+        return`<div class="rc" style="padding:8px 12px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+              <span style="flex:1;font-weight:${wH?700:400};color:${wH?'var(--gold)':'var(--txt)'}">${m.home}</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--green);min-width:50px;text-align:center">${m.home_score}—${m.away_score}</span>
+              <span style="flex:1;text-align:right;font-weight:${wA?700:400};color:${wA?'var(--gold)':'var(--txt)'}">${m.away}</span>
+            </div>
+            <div style="font-size:10px;color:var(--mut);text-align:center;margin-top:2px">${d} · ${m.stadium||''}</div>
+          </div>
+        </div>`;
+      }).join('');
+    });
+    el.innerHTML=html;
+  }
+}
+async function showTournamentDetail(tournamentId){
+  const el=document.getElementById('historialContent');if(!el)return;
+  el.innerHTML='<div class="empty"><div class="ic">⏳</div><p>Cargando...</p></div>';
+  const{data:t}=await sb.from('tournaments').select('*').eq('id',tournamentId).single();
+  if(!t){el.innerHTML='<div class="empty"><p>Torneo no encontrado</p></div>';return;}
+  // Load matches for this tournament
+  const{data:ms}=await sb.from('matches').select('*')
+    .eq('tournament_id',tournamentId).eq('status','FINISHED')
+    .order('match_date');
+  const{data:tr}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single();
+  // Stats
+  const totalGoals=(ms||[]).reduce((s,m)=>s+(m.home_score||0)+(m.away_score||0),0);
+  const totalMatches=(ms||[]).length;
+  el.innerHTML=`
+    <button class="btn p sm" onclick="showHistorial('torneos')" style="margin-bottom:12px">← Volver</button>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:48px">${t.emoji||'🏆'}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:var(--gold)">${t.name}</div>
+      <div style="font-size:12px;color:var(--mut)">${t.api_season||''} · ${totalMatches} partidos jugados · ${totalGoals} goles</div>
+    </div>
+    ${tr?.champion?`
+    <div style="background:var(--card);border:1px solid rgba(245,200,66,.3);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+        ${tr.champion?`<div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--mut)">🥇 CAMPEÓN</div><div style="font-weight:700;color:var(--gold);margin-top:2px">${tr.champion}</div></div>`:''}
+        ${tr.runner_up?`<div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--mut)">🥈 SUBCAMPEÓN</div><div style="font-weight:700;margin-top:2px">${tr.runner_up}</div></div>`:''}
+        ${tr.top_scorer?`<div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--mut)">👟 GOLEADOR</div><div style="font-weight:700;margin-top:2px">${tr.top_scorer}</div></div>`:''}
+        ${tr.mvp?`<div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center"><div style="font-size:10px;color:var(--mut)">🌟 MVP</div><div style="font-weight:700;margin-top:2px">${tr.mvp}</div></div>`:''}
+      </div>
+    </div>`:''}
+    <div class="stitle" style="font-size:15px">Resultados eliminatorios</div>
+    ${['Final','Semis','Cuartos','Octavos','R32'].map(ph=>{
+      const phMs=(ms||[]).filter(m=>m.phase===ph);
+      if(!phMs.length)return'';
+      return`<div style="margin-bottom:8px">
+        <div style="font-size:10px;color:var(--mut);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">${ph}</div>
+        ${phMs.map(m=>{
+          const wH=m.home_score>m.away_score;
+          return`<div style="background:var(--card);border-radius:8px;padding:8px 11px;margin-bottom:4px;display:flex;align-items:center;gap:8px;font-size:12px">
+            <span style="flex:1;font-weight:${wH?700:400};color:${wH?'var(--gold)':'inherit'}">${m.home}</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green);letter-spacing:2px">${m.home_score}–${m.away_score}</span>
+            <span style="flex:1;text-align:right;font-weight:${!wH?700:400};color:${!wH?'var(--gold)':'inherit'}">${m.away}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('')}
+  `;
+}
 // ── ESTADÍSTICAS ──────────────────────────────────────────────────
 let statsMode='goals';
 function showStats(mode,btn){
@@ -1211,7 +1443,7 @@ async function renderStats(){
     </div>`;
   }).join('');
 }
-function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();if(id==='stats')renderStats();}
+function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();if(id==='stats')renderStats();if(id==='historial'){histMode='torneos';renderHistorial();}if(id==='quiniela'){renderFinalPredsForm();}}
 function showRk(mode,btn){S.rkMode=mode;document.querySelectorAll('#panel-ranking .it').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderRk(mode);}
 function filterM(ph,btn){document.querySelectorAll('#panel-quiniela .it').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');document.querySelectorAll('.mc').forEach(c=>{c.style.display=(ph==='all'||c.dataset.phase===ph)?'':'none';});}
 async function renderRk(mode){const el=document.getElementById('globalRank');if(!el)return;if(!S._allPreds)S._allPreds=await loadAllPreds();const s=S.allUsers.map(u=>{const q=calcQPts(u.id),f=calcFPts(u.id);return{name:u.username,q,f,total:q+f};}).sort((a,b)=>mode==='quiniela'?b.q-a.q:mode==='fantasy'?b.f-a.f:b.total-a.total);if(!s.length){el.innerHTML='<div class="empty"><div class="ic">🏅</div><p>Sois solo tú por ahora</p></div>';return;}const mp=u=>mode==='quiniela'?u.q:mode==='fantasy'?u.f:u.total;el.innerHTML=s.map((u,i)=>`<div class="rc"><div class="rp ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i+1}</div><div style="flex:1"><div class="rn">${u.name}</div><div class="rtags"><span class="rtag m">🎯 ${u.q}</span><span class="rtag f">⚽ ${u.f}</span></div></div><div class="rpts">${mp(u)}<span style="font-size:10px;color:var(--mut)"> pts</span></div></div>`).join('');}
@@ -1238,8 +1470,40 @@ async function lockU(uid){await sb.from('fantasy').update({unlocked_by_admin:fal
 function renderAdminMatches(){const ct=document.getElementById('adminMatches');if(!ct)return;ct.innerHTML='';let lph='';S.matches.forEach(m=>{if(m.phase!==lph){lph=m.phase;const lb=document.createElement('div');lb.className='day-lbl';lb.style.marginTop='9px';lb.textContent='── '+m.phase+' ──';ct.appendChild(lb);}const d=document.createElement('div');d.className='am';const tbd=isTBD(m.home)||isTBD(m.away);const tStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short',timeZone:'Europe/Madrid'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}):'';d.innerHTML=`<h4>${m.home} <span style="color:var(--mut)">vs</span> ${m.away} <span style="color:var(--mut);font-size:9px">${tStr}</span>${m.status==='FINISHED'?'<span style="color:var(--green);font-size:9px"> ✓</span>':''}${m.status==='IN_PLAY'?'<span style="color:var(--red);font-size:9px"> 🔴</span>':''}</h4>${tbd?'<p style="font-size:10px;color:var(--mut)">⏳ Equipos pendientes</p>':`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><div class="si"><input type="number" min="0" max="30" id="rh-${m.id}" value="${m.home_score??''}" placeholder="0"><span>—</span><input type="number" min="0" max="30" id="ra-${m.id}" value="${m.away_score??''}" placeholder="0"></div><button class="btn p sm" onclick="saveRes('${m.id}')">✓</button>${m.status==='FINISHED'?`<button class="btn r sm" onclick="unsetRes('${m.id}')">✗</button>`:''}</div>`}`;ct.appendChild(d);});}
 async function saveRes(mid){const h=parseInt(document.getElementById('rh-'+mid)?.value),a=parseInt(document.getElementById('ra-'+mid)?.value);if(isNaN(h)||isNaN(a)){toast('Introduce ambos goles','err');return;}const{error}=await sb.from('matches').update({home_score:h,away_score:a,status:'FINISHED',updated_at:new Date().toISOString()}).eq('id',mid);if(error){toast('Error','err');return;}toast('✓ Resultado guardado');S._allPreds=null;await loadMatches();renderAdminMatches();renderAll();}
 async function unsetRes(mid){await sb.from('matches').update({home_score:null,away_score:null,status:'SCHEDULED',updated_at:new Date().toISOString()}).eq('id',mid);await loadMatches();renderAdminMatches();renderAll();toast('Resultado eliminado','info');}
-async function saveTR(){const{error}=await sb.from('tournament_results').upsert({group_id:S.groupId,champion:document.getElementById('tr-champ').value.trim(),runner_up:document.getElementById('tr-runner').value.trim(),top_scorer:document.getElementById('tr-scorer').value.trim(),mvp:document.getElementById('tr-mvp').value.trim(),quarter_teams:document.getElementById('tr-quarters').value?document.getElementById('tr-quarters').value.split(',').map(s=>s.trim()):[],semi_teams:document.getElementById('tr-semis').value?document.getElementById('tr-semis').value.split(',').map(s=>s.trim()):[],updated_at:new Date().toISOString()},{onConflict:'group_id'});if(error){toast('Error','err');return;}await loadTR();S._allPreds=null;renderRk(S.rkMode);renderFantasyRanking();toast('¡Datos del torneo guardados! 🏆');}
-function loadTRForm(){const tr=S.tr||{};const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('tr-champ',tr.champion);s('tr-runner',tr.runner_up);s('tr-scorer',tr.top_scorer);s('tr-mvp',tr.mvp);s('tr-quarters',(tr.quarter_teams||[]).join(','));s('tr-semis',(tr.semi_teams||[]).join(','));}
+async function saveTR(){
+  // Save only manual fields; auto fields come from computeTRFromMatches
+  const tr=S.tr||{};
+  const scorer=document.getElementById('tr-scorer').value.trim();
+  const mvp=document.getElementById('tr-mvp').value.trim();
+  const{error}=await sb.from('tournament_results').upsert({
+    group_id:S.groupId,
+    champion:tr.champion||'',
+    runner_up:tr.runner_up||'',
+    top_scorer:scorer||tr.top_scorer||'',
+    mvp:mvp||tr.mvp||'',
+    quarter_teams:tr.quarter_teams||[],
+    semi_teams:tr.semi_teams||[],
+    updated_at:new Date().toISOString()
+  },{onConflict:'group_id'});
+  if(error){toast('Error: '+error.message,'err');return;}
+  await loadTR();S._allPreds=null;renderRk(S.rkMode);renderFantasyRanking();
+  toast('✓ Guardado');
+}
+function loadTRForm(){
+  const tr=S.tr||{};
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  s('tr-scorer',tr.top_scorer);s('tr-mvp',tr.mvp);
+  // Show auto-computed status
+  const st=document.getElementById('tr-auto-status');
+  if(st){
+    const lines=[];
+    if(tr.champion)lines.push(`🥇 Campeón: <strong style="color:var(--gold)">${tr.champion}</strong>`);
+    if(tr.runner_up)lines.push(`🥈 Subcampeón: <strong style="color:var(--gold)">${tr.runner_up}</strong>`);
+    if(tr.semi_teams?.length)lines.push(`🏆 Semis: <span style="color:var(--txt)">${tr.semi_teams.join(', ')}</span>`);
+    if(tr.quarter_teams?.length)lines.push(`⚔️ Cuartos: <span style="color:var(--txt)">${tr.quarter_teams.slice(0,4).join(', ')}${tr.quarter_teams.length>4?'...':''}</span>`);
+    st.innerHTML=lines.length?lines.join('<br>'):'<span style="color:var(--mut)">Aún no hay resultados eliminatorios</span>';
+  }
+}
 function renderAdminGoals(){
   const el=document.getElementById('adminGoals');if(!el)return;
   const us=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.player);
