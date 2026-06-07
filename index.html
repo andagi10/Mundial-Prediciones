@@ -3,12 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#f5c842">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mundial 2026">
-<link rel="apple-touch-icon" href="icon-192.png">
+<script>
+// Inline manifest para funcionar sin archivos externos
+(function(){
+  const m={name:"Mundial 2026 — Apuestas",short_name:"Mundial 26",description:"Quiniela del Mundial 2026 entre amigos",start_url:window.location.href.split('?')[0],display:"standalone",background_color:"#0a0a0f",theme_color:"#f5c842",orientation:"portrait-primary",icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230a0a0f'/><text x='96' y='130' text-anchor='middle' font-size='110'>🏆</text></svg>",sizes:"192x192",type:"image/svg+xml"},{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230a0a0f'/><text x='256' y='360' text-anchor='middle' font-size='320'>🏆</text></svg>",sizes:"512x512",type:"image/svg+xml"}]};
+  const blob=new Blob([JSON.stringify(m)],{type:'application/manifest+json'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('link');link.rel='manifest';link.href=url;
+  document.head.appendChild(link);
+  // Apple touch icon inline
+  const icon=document.createElement('link');icon.rel='apple-touch-icon';
+  icon.href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='30' fill='%230a0a0f'/><text x='90' y='125' text-anchor='middle' font-size='105'>🏆</text></svg>";
+  document.head.appendChild(icon);
+})();
+</script>
 <title>Mundial 2026 — Apuestas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -292,8 +304,11 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   </div>
 
   <div class="install-banner" id="installBanner">
-    <div class="ib-txt"><strong>📲 Instalar app</strong>Añade Mundial 2026 a tu pantalla de inicio</div>
-    <button onclick="installPWA()">Instalar</button>
+    <div class="ib-txt">
+      <strong>📲 Instalar en tu móvil</strong>
+      <span id="installBannerSub">Añade Mundial 2026 a tu pantalla de inicio para usarla como app</span>
+    </div>
+    <button onclick="installPWA()">📥 Instalar</button>
     <button class="ib-close" onclick="dismissInstall()">✕</button>
   </div>
 
@@ -343,11 +358,12 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div class="stitle">🏆 Predicciones del Torneo</div>
     <div class="fp-card">
       <h3>¿Quién va a ganar?</h3>
-      <div class="pf"><label>🥇 Campeón</label><select id="fp-champ"><option value="">— Selecciona —</option></select></div>
-      <div class="pf"><label>🥈 Subcampeón</label><select id="fp-runner"><option value="">— Selecciona —</option></select></div>
-      <div class="pf"><label>👟 Máx. Goleador</label><select id="fp-scorer"><option value="">— Selecciona —</option></select></div>
-      <div class="pf"><label>🌟 MVP</label><select id="fp-mvp"><option value="">— Selecciona —</option></select></div>
-      <button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">Guardar predicciones</button>
+      <div style="background:rgba(124,92,191,.1);border:1px solid rgba(124,92,191,.3);border-radius:8px;padding:8px 11px;font-size:11px;color:var(--mut);margin-bottom:10px">
+        🔒 <strong style="color:var(--txt)">Una vez guardadas, las predicciones quedan bloqueadas</strong> hasta que el admin las desbloquee (igual que en Fantasy).
+      </div>
+      <div id="finalPredsArea">
+        <!-- Rendered by renderFinalPredsForm() -->
+      </div>
     </div>
     <div class="normas-card">
       <h3>📋 Normas de puntuación</h3>
@@ -435,6 +451,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
         </div>
       </div>
       <div class="ab"><h3>🔓 Desbloquear Fantasy</h3><p style="color:var(--mut);font-size:11px;margin-bottom:7px">Permite a un participante cambiar su equipo/jugador.</p><div id="adminUnlocks"></div></div>
+      <div class="ab"><h3>🏆 Desbloquear Predicciones Torneo</h3><p style="color:var(--mut);font-size:11px;margin-bottom:7px">Permite a un participante cambiar su campeón/subcampeón/goleador/MVP.</p><div id="adminFPUnlocks"></div></div>
       <div class="ab">
         <h3>⚽ Resultados (manual / corrección)</h3>
         <div id="adminMatches"></div>
@@ -484,7 +501,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
 <script>
 const SUPABASE_URL='https://jygbsfbnkqtugmgyjgpw.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5Z2JzZmJua3F0dWdtZ3lqZ3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzA3OTQsImV4cCI6MjA5NjM0Njc5NH0.fN7bLgzzQdR_XF3I-4aKPp1xXkWzytqfLMlfmxIKqeA';
-const APP_URL='https://andagi10.github.io/mundial2026'; // ← cambia por tu URL real
+const APP_URL=window.location.href.split('?')[0].replace(/\/$/,''); // URL dinámica automática
 
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const TEAMS=['🇦🇷 Argentina','🇦🇺 Australia','🇦🇹 Austria','🇩🇿 Argelia','🇧🇪 Bélgica','🇧🇦 Bosnia y Herz.','🇧🇷 Brasil','🇨🇦 Canadá','🇨🇻 Cabo Verde','🇨🇿 Chequia','🇨🇴 Colombia','🇨🇩 DR Congo','🇭🇷 Croacia','🇨🇼 Curazao','🇨🇮 Costa de Marfil','🇪🇨 Ecuador','🇪🇬 Egipto','🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia','🇪🇸 España','🇺🇸 USA','🇫🇷 Francia','🇬🇭 Ghana','🇭🇹 Haití','🇮🇷 Irán','🇮🇶 Iraq','🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra','🇯🇵 Japón','🇯🇴 Jordania','🇲🇦 Marruecos','🇲🇽 México','🇳🇱 Países Bajos','🇳🇿 Nueva Zelanda','🇳🇴 Noruega','🇵🇦 Panamá','🇵🇾 Paraguay','🇵🇹 Portugal','🇶🇦 Qatar','🇸🇦 Arabia Saudita','🇸🇳 Senegal','🇰🇷 Corea del Sur','🇿🇦 Sudáfrica','🇨🇭 Suiza','🇸🇪 Suecia','🇹🇳 Túnez','🇹🇷 Turquía','🇺🇾 Uruguay','🇺🇿 Uzbekistán'];
@@ -1304,27 +1321,41 @@ const SQUADS = {
 };
 
 
-// ── BRACKET OFICIAL R32 (fuente: FIFA / worldcuppass.com) ─────────
-// Formato: {id, h: "descripcion home", a: "descripcion away", date, venue, matchId en DB}
-// Bracket oficial FIFA World Cup 2026 — R32
-// Fuente: worldcuppass.com / FIFA official
+// ── BRACKET OFICIAL R32 — Datos reales FIFA World Cup 2026 ─────────
+// Fuente: calendario oficial FIFA / imágenes proporcionadas
 const R32_DEFS=[
-  {num:'73',h:'2A',a:'2B',date:'Dom 28 Jun',venue:'SoFi, Inglewood'},
-  {num:'74',h:'1E',a:'3er A/B/C/D/F',date:'Lun 29 Jun',venue:'Gillette, Foxborough'},
-  {num:'75',h:'1F',a:'2C',date:'Lun 29 Jun',venue:'BBVA, Monterrey'},
-  {num:'76',h:'1C',a:'2F',date:'Lun 29 Jun',venue:'NRG, Houston'},
-  {num:'77',h:'1I',a:'3er C/D/F/G/H',date:'Mar 30 Jun',venue:'MetLife, NJ'},
-  {num:'78',h:'2E',a:'2I',date:'Mar 30 Jun',venue:'AT&T, Dallas'},
-  {num:'79',h:'1A',a:'3er C/E/F/H/I',date:'Mar 30 Jun',venue:'Azteca, CDMX'},
-  {num:'80',h:'1L',a:'3er E/H/I/J/K',date:'Mié 1 Jul',venue:'MB, Atlanta'},
-  {num:'81',h:'1D',a:'3er B/E/F/I/J',date:'Mié 1 Jul',venue:"Levi's, SF"},
-  {num:'82',h:'1G',a:'3er A/E/H/I/J',date:'Mié 1 Jul',venue:'Lumen, Seattle'},
-  {num:'83',h:'2K',a:'2L',date:'Jue 2 Jul',venue:'BMO, Toronto'},
-  {num:'84',h:'1H',a:'2J',date:'Jue 2 Jul',venue:'SoFi, Inglewood'},
-  {num:'85',h:'1B',a:'3er E/F/G/I/J',date:'Jue 2 Jul',venue:'BC Place, Vancouver'},
-  {num:'86',h:'1J',a:'2H',date:'Vie 3 Jul',venue:'Hard Rock, Miami'},
-  {num:'87',h:'1K',a:'3er D/E/I/J/L',date:'Vie 3 Jul',venue:'Arrowhead, KC'},
-  {num:'88',h:'2D',a:'2G',date:'Vie 3 Jul',venue:'AT&T, Dallas'},
+  // Partido 73: A2 vs B2 — 28 Jun, Inglewood CA
+  {num:'73',h:'2A',a:'2B',date:'Sáb 28 Jun 21:00h',venue:'SoFi, Inglewood, CA'},
+  // Partido 74: E1 vs 3er(A/B/C/D/F) — 29 Jun, Foxborough MA
+  {num:'74',h:'1E',a:'3er A/B/C/D/F',date:'Dom 29 Jun 22:30h',venue:'Gillette, Foxborough, MA'},
+  // Partido 75: F1 vs C2 — 30 Jun, Monterrey
+  {num:'75',h:'1F',a:'2C',date:'Lun 30 Jun 03:00h',venue:'BBVA, Monterrey'},
+  // Partido 76: C1 vs F2 — 29 Jun, Houston
+  {num:'76',h:'1C',a:'2F',date:'Dom 29 Jun 19:00h',venue:'NRG, Houston, TX'},
+  // Partido 77: I1 vs 3er(C/D/F/G/H) — 30 Jun, NJ
+  {num:'77',h:'1I',a:'3er C/D/F/G/H',date:'Lun 30 Jun 23:00h',venue:'MetLife, E. Rutherford, NJ'},
+  // Partido 78: E2 vs I2 — 30 Jun, Arlington
+  {num:'78',h:'2E',a:'2I',date:'Lun 30 Jun 19:00h',venue:'AT&T, Arlington, TX'},
+  // Partido 79: A1 vs 3er(C/E/F/H/I) — 1 Jul, Ciudad de México
+  {num:'79',h:'1A',a:'3er C/E/F/H/I',date:'Mar 1 Jul 03:00h',venue:'Azteca, Ciudad de México'},
+  // Partido 80: L1 vs 3er(E/H/I/J/K) — 1 Jul, Atlanta
+  {num:'80',h:'1L',a:'3er E/H/I/J/K',date:'Mar 1 Jul 18:00h',venue:'MB, Atlanta, GA'},
+  // Partido 81: D1 vs 3er(B/E/F/I/J) — 2 Jul, Santa Clara
+  {num:'81',h:'1D',a:'3er B/E/F/I/J',date:'Mié 2 Jul 02:00h',venue:"Levi's, Santa Clara, CA"},
+  // Partido 82: G1 vs 3er(A/E/H/I/J) — 1 Jul, Seattle
+  {num:'82',h:'1G',a:'3er A/E/H/I/J',date:'Mar 1 Jul 22:00h',venue:'Lumen Field, Seattle, WA'},
+  // Partido 83: K2 vs L2 — 3 Jul, Toronto
+  {num:'83',h:'2K',a:'2L',date:'Jue 3 Jul 01:00h',venue:'BMO, Toronto, ON'},
+  // Partido 84: H1 vs J2 — 2 Jul, Inglewood
+  {num:'84',h:'1H',a:'2J',date:'Mié 2 Jul 21:00h',venue:'SoFi, Inglewood, CA'},
+  // Partido 85: B1 vs 3er(E/F/G/I/J) — 3 Jul, Vancouver
+  {num:'85',h:'1B',a:'3er E/F/G/I/J',date:'Jue 3 Jul 05:00h',venue:'BC Place, Vancouver, BC'},
+  // Partido 86: J1 vs H2 — 4 Jul, Miami
+  {num:'86',h:'1J',a:'2H',date:'Vie 4 Jul 00:00h',venue:'Hard Rock, Miami Gardens, FL'},
+  // Partido 87: K1 vs 3er(D/E/I/J/L) — 4 Jul, Kansas City
+  {num:'87',h:'1K',a:'3er D/E/I/J/L',date:'Vie 4 Jul 03:30h',venue:'Arrowhead, Kansas City, MO'},
+  // Partido 88: D2 vs G2 — 3 Jul, Arlington
+  {num:'88',h:'2D',a:'2G',date:'Jue 3 Jul 20:00h',venue:'AT&T, Arlington, TX'},
 ];
 
 let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null,_players:{}};
@@ -1372,28 +1403,63 @@ async function initApp(){
   await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
   renderAll();setSS('ok','Sincronizado');startRT();startLive();
 }
-function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();populateFinalPredSelects(S.finalPreds?.user_id?S.finalPreds:null);}
+function renderAll(){renderLive();renderMatches();renderFantasyForm();renderFinalPredsForm();renderBracket();}
 
 // DATA
 async function loadMatches(){const{data}=await sb.from('matches').select('*').order('match_date');S.matches=data||[];}
 async function loadPreds(){const{data}=await sb.from('predictions').select('*').eq('user_id',S.userId);S.preds={};(data||[]).forEach(p=>{S.preds[p.match_id]={home:p.home_pred,away:p.away_pred};});}
-async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};populateFinalPredSelects(data);}
-function populateFinalPredSelects(data){
-  // Populate team selects
+async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};renderFinalPredsForm();}
+function renderFinalPredsForm(){
+  const area=document.getElementById('finalPredsArea');if(!area)return;
+  const fp=S.finalPreds||{};
+  const locked=fp.locked;
+  const unl=fp.unlocked_by_admin;
   const teamOpts=TEAMS.map(t=>`<option value="${t}">${t}</option>`).join('');
-  ['fp-champ','fp-runner'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">— Selecciona —</option>'+teamOpts;el.dataset.filled='1';}});
-  // Populate player selects - all players from all squads
   let allPlayers=[];Object.entries(SQUADS).forEach(([team,squad])=>{squad.forEach(p=>{allPlayers.push({name:p.name,team,pos:p.pos});});});
   allPlayers.sort((a,b)=>a.name.localeCompare(b.name));
   const playerOpts=allPlayers.map(p=>`<option value="${p.name}">${p.name} (${p.team.replace(/^[^\s]+ /,'')})</option>`).join('');
-  ['fp-scorer','fp-mvp'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">— Selecciona —</option>'+playerOpts;el.dataset.filled='1';}});
-  // Set values
-  if(data){const s=(id,v)=>{const el=document.getElementById(id);if(el&&v){el.value=v;if(!el.value){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v;}}};s('fp-champ',data.champion);s('fp-runner',data.runner_up);s('fp-scorer',data.top_scorer);s('fp-mvp',data.mvp);}
+  if(locked&&!unl){
+    area.innerHTML=`
+    <div class="pf"><label>🥇 Campeón</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.champion||'—'}</span></div>
+    <div class="pf"><label>🥈 Subcampeón</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.runner_up||'—'}</span></div>
+    <div class="pf"><label>👟 Máx. Goleador</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.top_scorer||'—'}</span></div>
+    <div class="pf"><label>🌟 MVP</label><span style="font-size:13px;font-weight:700;color:var(--gold)">${fp.mvp||'—'}</span></div>
+    <div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee para cambiar</div>`;
+    return;
+  }
+  const champV=fp.champion||'',runnerV=fp.runner_up||'',scorerV=fp.top_scorer||'',mvpV=fp.mvp||'';
+  area.innerHTML=`
+  <div class="pf"><label>🥇 Campeón</label>
+    <select id="fp-champ"><option value="">— Selecciona —</option>${teamOpts}</select>
+  </div>
+  <div class="pf"><label>🥈 Subcampeón</label>
+    <select id="fp-runner"><option value="">— Selecciona —</option>${teamOpts}</select>
+  </div>
+  <div class="pf"><label>👟 Máx. Goleador</label>
+    <select id="fp-scorer"><option value="">— Selecciona —</option>${playerOpts}</select>
+  </div>
+  <div class="pf"><label>🌟 MVP</label>
+    <select id="fp-mvp"><option value="">— Selecciona —</option>${playerOpts}</select>
+  </div>
+  ${unl?'<div class="unlockb">🔓 Desbloqueado por admin — puedes modificar</div>':''}
+  <button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">🔒 Guardar y bloquear</button>
+  ${!locked?'<p style="font-size:10px;color:var(--mut);margin-top:5px">⚠️ Una vez guardadas no podrás cambiarlas sin el admin</p>':''}`;
+  // Set values after DOM insert
+  requestAnimationFrame(()=>{
+    const s=(id,v)=>{const el=document.getElementById(id);if(el&&v){el.value=v;if(!el.value){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v;}}};
+    s('fp-champ',champV);s('fp-runner',runnerV);s('fp-scorer',scorerV);s('fp-mvp',mvpV);
+  });
 }
+function populateFinalPredSelects(data){renderFinalPredsForm();}
 async function loadFantasy(){const{data}=await sb.from('fantasy').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.fantasy=data||null;}
 async function loadAllUsers(){const{data}=await sb.from('users').select('*').eq('group_id',S.groupId);S.allUsers=data||[];}
 async function loadAllFantasy(){const{data}=await sb.from('fantasy').select('*').eq('group_id',S.groupId);S.allFantasy=data||[];}
 async function loadAllFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('group_id',S.groupId);S.allFinalPreds=data||[];}
+// Note: The final_predictions table needs 'locked' (boolean, default false) and 
+// 'unlocked_by_admin' (boolean, default false) columns in Supabase.
+// Run in Supabase SQL Editor:
+// ALTER TABLE final_predictions ADD COLUMN IF NOT EXISTS locked boolean DEFAULT false;
+// ALTER TABLE final_predictions ADD COLUMN IF NOT EXISTS unlocked_by_admin boolean DEFAULT false;
 async function loadTR(){const{data}=await sb.from('tournament_results').select('*').eq('group_id',S.groupId).single();S.tr=data||null;}
 async function loadAllPreds(){const ids=S.allUsers.map(u=>u.id);if(!ids.length)return{};const{data}=await sb.from('predictions').select('*').in('user_id',ids);const m={};(data||[]).forEach(p=>{if(!m[p.user_id])m[p.user_id]={};m[p.user_id][p.match_id]={home:p.home_pred,away:p.away_pred};});return m;}
 
@@ -1609,8 +1675,11 @@ async function saveFinalPreds(){
   const runner=document.getElementById('fp-runner')?.value.trim();
   const scorer=document.getElementById('fp-scorer')?.value.trim();
   const mvp=document.getElementById('fp-mvp')?.value.trim();
-  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:champ,runner_up:runner,top_scorer:scorer,mvp:mvp,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
-  if(error){toast('Error: '+error.message,'err');return;}await loadFinalPreds();toast('¡Predicciones guardadas! 🏆');
+  if(!champ){toast('Selecciona al menos el campeón','err');return;}
+  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:champ,runner_up:runner,top_scorer:scorer,mvp:mvp,locked:true,unlocked_by_admin:false,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
+  if(error){toast('Error: '+error.message,'err');return;}
+  await loadFinalPreds();await loadAllFinalPreds();
+  toast('¡Predicciones guardadas y bloqueadas! 🏆🔒');
 }
 
 // ── BRACKET VISUAL ────────────────────────────────────────────────
@@ -1641,109 +1710,78 @@ function renderBracketGroups(){
 }
 function renderBracketKO(){
   const el=document.getElementById('bracketKO');if(!el)return;
-  // Build visual bracket with boxes and lines
   const phases=['R32','Octavos','Cuartos','Semis','Final'];
-  const phaseLabels={R32:'Ronda de 32',Octavos:'Octavos',Cuartos:'Cuartos',Semis:'Semis',Final:'Final'};
+  const phaseLabels={R32:'Ronda de 32 (16 partidos)',Octavos:'Octavos de Final',Cuartos:'Cuartos de Final',Semis:'Semifinales',Final:'Gran Final'};
+  const phaseIcons={R32:'⚔️',Octavos:'🔟',Cuartos:'🎯',Semis:'🔥',Final:'🏆'};
 
-  // Get matches per phase, fallback to R32_DEFS for R32 if empty
   function getPhaseMatches(ph){
     const ms=S.matches.filter(m=>m.phase===ph);
     if(ph==='R32'&&!ms.length) return R32_DEFS.map(r=>({id:'r'+r.num,home:r.h,away:r.a,status:'SCHEDULED',home_score:null,away_score:null,match_date:null,stadium:r.venue,_label:r.num,_date:r.date}));
     return ms;
   }
 
-  function matchBox(m){
+  function matchCard(m){
     const fin=m.status==='FINISHED',live=m.status==='IN_PLAY';
-    const wH=fin&&m.home_score>m.away_score,wA=fin&&m.away_score>m.home_score;
     const tbdH=isTBD(m.home),tbdA=isTBD(m.away);
-    const scoreH=fin||live?(m.home_score??0):tbdH?'':'—';
-    const scoreA=fin||live?(m.away_score??0):tbdA?'':'—';
-    const border=fin?'rgba(46,204,113,.35)':live?'rgba(231,76,60,.6)':'#2a2a3f';
-    const d=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):(m._date||'');
     const labelH=tbdH?fmtTBD(m.home):m.home;
     const labelA=tbdA?fmtTBD(m.away):m.away;
-    return`<div style="background:#1a1a26;border:1px solid ${border};border-radius:8px;width:134px;font-size:10px;overflow:hidden;flex-shrink:0">
-      <div style="background:#12121a;padding:2px 6px;font-size:9px;color:#6b6b88;display:flex;justify-content:space-between">
-        <span>${d}</span><span style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap;max-width:70px">${m.stadium||''}</span>
+    const wH=fin&&m.home_score>m.away_score;
+    const wA=fin&&m.away_score>m.home_score;
+    const scoreH=fin||live?(m.home_score??0):'';
+    const scoreA=fin||live?(m.away_score??0):'';
+    const border=live?'var(--red)':fin?'rgba(46,204,113,.5)':'var(--bor)';
+    const dateStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})+'h':(m._date||'Fecha TBD');
+    const matchNum=m._label?`P${m._label}`:'';
+
+    return`<div style="background:var(--card);border:1px solid ${border};border-radius:10px;overflow:hidden;transition:border-color .2s;${live?'animation:lb 2s infinite':''}">
+      <div style="background:var(--sur);padding:3px 8px;display:flex;justify-content:space-between;align-items:center;font-size:9px;color:var(--mut)">
+        <span style="font-weight:700;color:var(--acc)">${matchNum}</span>
+        <span style="flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px">${dateStr}</span>
+        <span style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px">${m.stadium||''}</span>
       </div>
-      <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wH?'rgba(245,200,66,.07)':'transparent'}">
-        <span style="color:${tbdH?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdH?'italic':'normal'}">${labelH}</span>
-        <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wH?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreH}</span>
+      <div style="padding:7px 10px;display:flex;align-items:center;gap:6px;background:${wH?'rgba(245,200,66,.07)':'transparent'}">
+        <span style="flex:1;font-size:12px;font-weight:${wH?'700':'500'};color:${tbdH?'var(--mut)':'var(--txt)'};font-style:${tbdH?'italic':'normal'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelH}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;min-width:22px;text-align:center;color:${wH?'var(--gold)':fin?'var(--txt)':'var(--mut)'}">${scoreH}</span>
       </div>
-      <div style="height:1px;background:#2a2a3f"></div>
-      <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wA?'rgba(245,200,66,.07)':'transparent'}">
-        <span style="color:${tbdA?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdA?'italic':'normal'}">${labelA}</span>
-        <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wA?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreA}</span>
+      <div style="height:1px;background:var(--bor)"></div>
+      <div style="padding:7px 10px;display:flex;align-items:center;gap:6px;background:${wA?'rgba(245,200,66,.07)':'transparent'}">
+        <span style="flex:1;font-size:12px;font-weight:${wA?'700':'500'};color:${tbdA?'var(--mut)':'var(--txt)'};font-style:${tbdA?'italic':'normal'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${labelA}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;min-width:22px;text-align:center;color:${wA?'var(--gold)':fin?'var(--txt)':'var(--mut)'}">${scoreA}</span>
       </div>
-      ${live?'<div style="background:var(--red);color:#fff;font-size:8px;font-weight:700;text-align:center;padding:2px">🔴 EN VIVO</div>':''}
+      ${live?`<div style="background:var(--red);color:#fff;font-size:8px;font-weight:700;text-align:center;padding:2px;animation:pu 1s infinite">🔴 EN VIVO${m.minute?' — '+m.minute+"'":''}  </div>`:''}
     </div>`;
   }
 
-  const CARD_H=68; // match box height in px
-  const R32_H=CARD_H+4; // per-match slot height
-
-  // Build the bracket as a scrollable horizontal flex layout
-  let html='<div style="overflow-x:auto;padding-bottom:16px;-webkit-overflow-scrolling:touch"><div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:8px 4px">';
-
-  phases.forEach((ph,pi)=>{
+  let html='';
+  phases.forEach(ph=>{
     const ms=getPhaseMatches(ph);
-    const spacing=Math.pow(2,pi); // vertical spacing multiplier per round
-    const slotH=R32_H*spacing+(spacing-1)*4; // total height of one "slot" this round
+    if(!ms.length)return;
+    const finCount=ms.filter(m=>m.status==='FINISHED').length;
+    const liveCount=ms.filter(m=>m.status==='IN_PLAY').length;
+    const statusStr=finCount===ms.length?`<span style="color:var(--green);font-size:10px">✓ Completada</span>`:liveCount?`<span style="color:var(--red);font-size:10px;animation:pu 1s infinite">🔴 En curso (${liveCount})</span>`:`<span style="color:var(--mut);font-size:10px">${finCount}/${ms.length} jugados</span>`;
 
-    html+=`<div style="display:flex;flex-direction:column">`;
-    html+=`<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b6b88;text-align:center;padding:3px 6px 6px">${phaseLabels[ph]}</div>`;
-    html+=`<div style="display:flex;flex-direction:column">`;
-
-    // Pairs: space between pairs = spacing matches height
-    const pairGap=pi>0?(slotH-CARD_H*2-4)*1:0;
-
-    ms.forEach((m,mi)=>{
-      if(pi>0&&mi>0&&mi%(1)===0){
-        // Add spacer between each match after the first
-        const spacerH=slotH-CARD_H-4;
-        html+=`<div style="height:${spacerH}px"></div>`;
-      }
-      html+=`<div style="display:flex;align-items:center">${matchBox(m)}`;
-      // Connector line to right
-      if(pi<phases.length-1){
-        const midH=CARD_H/2;
-        // If even match, line goes right and up to middle of pair
-        // If odd match, line goes right and down to middle of pair
-        const isEven=mi%2===0;
-        const pairMidOffset=slotH/2-CARD_H/2+CARD_H/2;
-        const lineH=slotH;
-        const goUp=isEven;
-        const connH=slotH;
-        const top=isEven?CARD_H/2:-(slotH-CARD_H-4+CARD_H/2);
-        html+=`<svg width="24" height="${connH}" style="overflow:visible;flex-shrink:0" fill="none">
-          <line x1="0" y1="${CARD_H/2}" x2="12" y2="${CARD_H/2}" stroke="#2a2a3f" stroke-width="1"/>
-          ${isEven?
-            `<line x1="12" y1="${CARD_H/2}" x2="12" y2="${connH-4}" stroke="#2a2a3f" stroke-width="1"/>`:
-            `<line x1="12" y1="${CARD_H/2}" x2="12" y2="${4}" stroke="#2a2a3f" stroke-width="1"/>`
-          }
-          ${isEven?
-            `<line x1="12" y1="${connH-4}" x2="24" y2="${connH-4}" stroke="#2a2a3f" stroke-width="1"/>`:
-            `<line x1="12" y1="${4}" x2="24" y2="${4}" stroke="#2a2a3f" stroke-width="1"/>`
-          }
-        </svg>`;
-      }
-      html+='</div>';
-    });
-
-    html+='</div></div>';
-    // Gap between rounds
-    if(pi<phases.length-1) html+='<div style="width:0"></div>';
+    html+=`<div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:var(--acc)">${phaseIcons[ph]} ${phaseLabels[ph]}</span>
+        <div style="flex:1;height:1px;background:var(--bor)"></div>
+        ${statusStr}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:7px">
+        ${ms.map(m=>matchCard(m)).join('')}
+      </div>
+    </div>`;
   });
 
-  // Trophy
-  html+=`<div style="display:flex;align-items:center;padding-left:8px;align-self:center;margin-top:${R32_H*8+4}px">
-    <div style="background:rgba(245,200,66,.1);border:1px solid #f5c842;border-radius:10px;padding:10px 12px;text-align:center;width:80px">
-      <div style="font-size:22px;margin-bottom:3px">🏆</div>
-      <div style="font-size:9px;font-weight:700;color:#f5c842;letter-spacing:1px">CAMPEÓN</div>
+  // Campeón
+  const champ=S.tr?.champion;
+  html+=`<div style="margin-top:8px;text-align:center">
+    <div style="display:inline-block;background:rgba(245,200,66,.1);border:1px solid var(--gold);border-radius:14px;padding:14px 24px;text-align:center">
+      <div style="font-size:32px;margin-bottom:4px">🏆</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--gold)">CAMPEÓN MUNDIAL 2026</div>
+      ${champ?`<div style="font-size:14px;font-weight:700;margin-top:4px">${champ}</div>`:`<div style="font-size:11px;color:var(--mut);margin-top:4px">Por determinar</div>`}
     </div>
   </div>`;
 
-  html+='</div></div>';
   el.innerHTML=html;
 }
 
@@ -1900,13 +1938,31 @@ function copyLink(){navigator.clipboard?.writeText(getLink()).then(()=>{toast('�
 
 // ADMIN
 let adminAuthed=false;
-function renderAdmin(){const la=document.getElementById('adminLogin'),ct=document.getElementById('adminContent');if(adminAuthed){la.innerHTML=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap"><span style="color:var(--green);font-size:11px;font-weight:600">✓ Admin activo</span><button class="btn r sm" onclick="logoutAdmin()">Salir</button></div>`;ct.style.display='';renderAdminMatches();renderAdminGoals();renderAdminUnlocks();loadTRForm();}else{la.innerHTML=`<div class="ab"><h3>🔐 Acceso Admin</h3><p style="color:var(--mut);font-size:11px;margin-bottom:9px">Solo el creador del grupo.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><input type="password" id="aPF" maxlength="8" placeholder="PIN" style="width:82px;background:var(--bg);border:1px solid var(--bor);border-radius:7px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:14px;padding:6px 8px;letter-spacing:3px;text-align:center" onkeydown="if(event.key==='Enter')loginAdmin()"><button class="btn g" onclick="loginAdmin()">Entrar</button></div></div>`;ct.style.display='none';}}
+function renderAdmin(){const la=document.getElementById('adminLogin'),ct=document.getElementById('adminContent');if(adminAuthed){la.innerHTML=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap"><span style="color:var(--green);font-size:11px;font-weight:600">✓ Admin activo</span><button class="btn r sm" onclick="logoutAdmin()">Salir</button></div>`;ct.style.display='';renderAdminMatches();renderAdminGoals();renderAdminUnlocks();renderAdminFPUnlocks();loadTRForm();}else{la.innerHTML=`<div class="ab"><h3>🔐 Acceso Admin</h3><p style="color:var(--mut);font-size:11px;margin-bottom:9px">Solo el creador del grupo.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><input type="password" id="aPF" maxlength="8" placeholder="PIN" style="width:82px;background:var(--bg);border:1px solid var(--bor);border-radius:7px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:14px;padding:6px 8px;letter-spacing:3px;text-align:center" onkeydown="if(event.key==='Enter')loginAdmin()"><button class="btn g" onclick="loginAdmin()">Entrar</button></div></div>`;ct.style.display='none';}}
 function loginAdmin(){const p=document.getElementById('aPF').value;if(p===S.adminPin){adminAuthed=true;renderAdmin();toast('✓ Admin autenticado');}else{toast('PIN incorrecto ❌','err');document.getElementById('aPF').value='';}}
 function logoutAdmin(){adminAuthed=false;renderAdmin();}
 async function changePin(){const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value;if(o!==S.adminPin){toast('PIN actual incorrecto','err');return;}if(n.length<4){toast('Mínimo 4 dígitos','err');return;}const{error}=await sb.from('groups').update({admin_pin:n}).eq('id',S.groupId);if(error){toast('Error','err');return;}S.adminPin=n;saveSess();document.getElementById('oldPin').value='';document.getElementById('newPin').value='';toast('✓ PIN cambiado');}
 function renderAdminUnlocks(){const el=document.getElementById('adminUnlocks');if(!el)return;const locked=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.locked);if(!locked.length){el.innerHTML='<p style="color:var(--mut);font-size:11px">Ningún participante tiene selección bloqueada.</p>';return;}el.innerHTML=locked.map(u=>{const f=S.allFantasy.find(x=>x.user_id===u.id);return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap;background:var(--bg);border-radius:7px;padding:8px"><div style="flex:1"><div style="font-weight:600;font-size:11px">${u.username}</div><div style="font-size:10px;color:var(--mut)">${f?.team||'?'} · ${f?.player||'?'}</div></div>${f?.unlocked_by_admin?`<span class="unlockb" style="font-size:10px">🔓</span><button class="btn r sm" onclick="lockU('${u.id}')">Bloquear</button>`:`<button class="btn p sm" onclick="unlockU('${u.id}')">🔓 Desbloquear</button>`}</div>`;}).join('');}
 async function unlockU(uid){await sb.from('fantasy').update({unlocked_by_admin:true}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFantasy();renderAdminUnlocks();toast('✓ Desbloqueado');}
 async function lockU(uid){await sb.from('fantasy').update({unlocked_by_admin:false}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFantasy();renderAdminUnlocks();toast('🔒 Bloqueado de nuevo');}
+async function unlockFP(uid){await sb.from('final_predictions').update({unlocked_by_admin:true}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFinalPreds();renderAdminFPUnlocks();toast('✓ Predicciones torneo desbloqueadas');}
+async function lockFP(uid){await sb.from('final_predictions').update({unlocked_by_admin:false}).eq('user_id',uid).eq('group_id',S.groupId);await loadAllFinalPreds();renderAdminFPUnlocks();toast('🔒 Predicciones torneo bloqueadas de nuevo');}
+function renderAdminFPUnlocks(){
+  const el=document.getElementById('adminFPUnlocks');if(!el)return;
+  const locked=S.allUsers.filter(u=>S.allFinalPreds.find(f=>f.user_id===u.id)?.locked);
+  if(!locked.length){el.innerHTML='<p style="color:var(--mut);font-size:11px">Ningún participante tiene predicciones bloqueadas aún.</p>';return;}
+  el.innerHTML=locked.map(u=>{
+    const fp=S.allFinalPreds.find(x=>x.user_id===u.id);
+    return`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap;background:var(--bg);border-radius:7px;padding:8px">
+      <div style="flex:1"><div style="font-weight:600;font-size:11px">${u.username}</div>
+      <div style="font-size:10px;color:var(--mut)">${fp?.champion||'?'} · ${fp?.top_scorer||'?'}</div></div>
+      ${fp?.unlocked_by_admin?
+        `<span class="unlockb" style="font-size:10px">🔓</span><button class="btn r sm" onclick="lockFP('${u.id}')">Bloquear</button>`:
+        `<button class="btn p sm" onclick="unlockFP('${u.id}')">🔓 Desbloquear</button>`
+      }
+    </div>`;
+  }).join('');
+}
 function renderAdminMatches(){const ct=document.getElementById('adminMatches');if(!ct)return;ct.innerHTML='';let lph='';S.matches.forEach(m=>{if(m.phase!==lph){lph=m.phase;const lb=document.createElement('div');lb.className='day-lbl';lb.style.marginTop='9px';lb.textContent='── '+m.phase+' ──';ct.appendChild(lb);}const d=document.createElement('div');d.className='am';const tbd=isTBD(m.home)||isTBD(m.away);const tStr=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';d.innerHTML=`<h4>${m.home} <span style="color:var(--mut)">vs</span> ${m.away} <span style="color:var(--mut);font-size:9px">${tStr}</span>${m.status==='FINISHED'?'<span style="color:var(--green);font-size:9px"> ✓</span>':''}${m.status==='IN_PLAY'?'<span style="color:var(--red);font-size:9px"> 🔴</span>':''}</h4>${tbd?'<p style="font-size:10px;color:var(--mut)">⏳ Equipos pendientes</p>':`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><div class="si"><input type="number" min="0" max="30" id="rh-${m.id}" value="${m.home_score??''}" placeholder="0"><span>—</span><input type="number" min="0" max="30" id="ra-${m.id}" value="${m.away_score??''}" placeholder="0"></div><button class="btn p sm" onclick="saveRes('${m.id}')">✓</button>${m.status==='FINISHED'?`<button class="btn r sm" onclick="unsetRes('${m.id}')">✗</button>`:''}</div>`}`;ct.appendChild(d);});}
 async function saveRes(mid){const h=parseInt(document.getElementById('rh-'+mid)?.value),a=parseInt(document.getElementById('ra-'+mid)?.value);if(isNaN(h)||isNaN(a)){toast('Introduce ambos goles','err');return;}const{error}=await sb.from('matches').update({home_score:h,away_score:a,status:'FINISHED',updated_at:new Date().toISOString()}).eq('id',mid);if(error){toast('Error','err');return;}toast('✓ Resultado guardado');S._allPreds=null;await loadMatches();renderAdminMatches();renderAll();}
 async function unsetRes(mid){await sb.from('matches').update({home_score:null,away_score:null,status:'SCHEDULED',updated_at:new Date().toISOString()}).eq('id',mid);await loadMatches();renderAdminMatches();renderAll();toast('Resultado eliminado','info');}
@@ -1980,8 +2036,36 @@ if(loadSess()){initApp();}else{showScreen('auth');}
 
 <script>
 if('serviceWorker'in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-  navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='RELOAD')window.location.reload();});
+  // Intentamos registrar sw.js, pero si falla (GitHub Pages sin sw.js) lo creamos inline
+  window.addEventListener('load',()=>{
+    // Primero intentar SW externo
+    navigator.serviceWorker.register('sw.js').catch(()=>{
+      // Si no existe sw.js, crear uno inline con blob URL
+      const swCode=`
+self.addEventListener('install',e=>{self.skipWaiting();});
+self.addEventListener('activate',e=>{e.waitUntil(clients.claim());});
+self.addEventListener('fetch',e=>{
+  // Solo cachear recursos estáticos, pasar resto
+  if(e.request.method!=='GET')return;
+  const url=new URL(e.request.url);
+  if(url.origin!==self.location.origin)return;
+  e.respondWith(
+    caches.open('mundial2026-v1').then(cache=>
+      cache.match(e.request).then(cached=>
+        cached||fetch(e.request).then(resp=>{
+          if(resp.ok)cache.put(e.request,resp.clone());
+          return resp;
+        })
+      )
+    )
+  );
+});`;
+      const blob=new Blob([swCode],{type:'application/javascript'});
+      const swUrl=URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl).catch(()=>{});
+    });
+    navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='RELOAD')window.location.reload();});
+  });
 }
 let deferredPrompt=null;
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone;
@@ -2031,18 +2115,27 @@ if(isIOS&&!isInstalled&&!localStorage.getItem('installDismissed')){
 
 <!-- iOS INSTALL MODAL -->
 <div class="mo" id="iosModal">
-  <div class="md" style="max-width:340px">
-    <h3>📲 Instalar en iPhone</h3>
-    <p>Para instalar la app en iOS, sigue estos pasos:</p>
-    <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:12px;color:var(--txt);line-height:1.8">
-      <div style="margin-bottom:6px">1️⃣ Pulsa el botón <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:16px">⬆️</span> en la barra inferior de Safari</div>
-      <div style="margin-bottom:6px">2️⃣ Desplázate hacia abajo y pulsa <strong style="color:var(--gold)">Añadir a pantalla de inicio</strong></div>
-      <div>3️⃣ Pulsa <strong style="color:var(--gold)">Añadir</strong> — ¡y listo! 🎉</div>
+  <div class="md" style="max-width:360px">
+    <h3>📲 Instalar en iPhone / iPad</h3>
+    <p>Sigue estos pasos en Safari para instalar la app:</p>
+    <div style="background:var(--bg);border-radius:10px;padding:14px;font-size:12px;color:var(--txt);line-height:2">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:11px">1</div>
+        <div>Pulsa el icono <strong style="color:var(--gold)">Compartir</strong> <span style="font-size:15px">⬆️</span> en la barra inferior de Safari</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div style="background:var(--acc);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:11px">2</div>
+        <div>Desplázate y toca <strong style="color:var(--gold)">«Añadir a pantalla de inicio»</strong> <span style="font-size:15px">➕</span></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:11px">3</div>
+        <div>Toca <strong style="color:var(--gold)">«Añadir»</strong> — ¡La app aparecerá en tu pantalla! 🎉</div>
+      </div>
     </div>
-    <div style="margin-top:12px;text-align:center">
-      <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'><rect width='200' height='60' rx='8' fill='%231a1a26'/><text x='100' y='25' text-anchor='middle' fill='%236b6b88' font-size='10' font-family='sans-serif'>Safari → Compartir ⬆️ → Añadir a pantalla de inicio</text><text x='100' y='45' text-anchor='middle' fill='%23f5c842' font-size='11' font-family='sans-serif' font-weight='bold'>[ + Añadir a pantalla de inicio ]</text></svg>" style="width:100%;border-radius:6px;margin-bottom:10px">
+    <div style="margin-top:10px;padding:8px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:7px;font-size:11px;color:var(--mut)">
+      ⚠️ Esto solo funciona en <strong style="color:var(--txt)">Safari</strong>. Si usas Chrome en iPhone, ábrelo en Safari primero.
     </div>
-    <button class="btn g" style="width:100%" onclick="hideIOSInstall();localStorage.setItem('installDismissed','1')">Entendido ✓</button>
+    <button class="btn g" style="width:100%;margin-top:12px" onclick="hideIOSInstall();localStorage.setItem('installDismissed','1')">Entendido ✓</button>
   </div>
 </div>
 </body>
