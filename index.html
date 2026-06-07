@@ -324,6 +324,8 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div id="liveMatches"></div>
     <div class="stitle">📅 Próximos partidos</div>
     <div id="upcomingMatches"></div>
+    <div class="stitle">✅ Resultados recientes</div>
+    <div id="recentResults"></div>
   </div>
 
   <!-- QUINIELA -->
@@ -341,10 +343,10 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <div class="stitle">🏆 Predicciones del Torneo</div>
     <div class="fp-card">
       <h3>¿Quién va a ganar?</h3>
-      <div class="pf"><label>🥇 Campeón</label><input id="fp-champ" type="text" placeholder="Ej: España"></div>
-      <div class="pf"><label>🥈 Subcampeón</label><input id="fp-runner" type="text" placeholder="Ej: Brasil"></div>
-      <div class="pf"><label>👟 Máx. Goleador</label><input id="fp-scorer" type="text" placeholder="Ej: Mbappé"></div>
-      <div class="pf"><label>🌟 MVP</label><input id="fp-mvp" type="text" placeholder="Ej: Vinicius Jr"></div>
+      <div class="pf"><label>🥇 Campeón</label><select id="fp-champ"><option value="">— Selecciona —</option></select></div>
+      <div class="pf"><label>🥈 Subcampeón</label><select id="fp-runner"><option value="">— Selecciona —</option></select></div>
+      <div class="pf"><label>👟 Máx. Goleador</label><select id="fp-scorer"><option value="">— Selecciona —</option></select></div>
+      <div class="pf"><label>🌟 MVP</label><select id="fp-mvp"><option value="">— Selecciona —</option></select></div>
       <button class="btn g" style="margin-top:6px" onclick="saveFinalPreds()">Guardar predicciones</button>
     </div>
     <div class="normas-card">
@@ -393,6 +395,9 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
   <!-- ESTADÍSTICAS -->
   <div class="panel" id="panel-stats">
     <div class="stitle">📊 Estadísticas de Jugadores</div>
+    <div style="background:var(--card);border:1px solid var(--bor);border-radius:9px;padding:10px 13px;margin-bottom:10px;font-size:11px;color:var(--mut)">
+      ℹ️ Las estadísticas (goles y asistencias) las actualiza el <strong style="color:var(--txt)">admin</strong> manualmente desde el panel Admin → "Goles Fantasy". Así se actualizan los puntos del Fantasy en tiempo real.
+    </div>
     <div class="itabs" id="stats-tabs">
       <button class="it active" onclick="showStats('goals',this)">⚽ Goles</button>
       <button class="it" onclick="showStats('assists',this)">🅰️ Asistencias</button>
@@ -436,10 +441,10 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
       </div>
       <div class="ab">
         <h3>🏆 Datos Finales del Torneo</h3>
-        <div class="pf"><label>🥇 Campeón real</label><input id="tr-champ" type="text"></div>
-        <div class="pf"><label>🥈 Subcampeón real</label><input id="tr-runner" type="text"></div>
-        <div class="pf"><label>👟 Máx. Goleador</label><input id="tr-scorer" type="text"></div>
-        <div class="pf"><label>🌟 MVP</label><input id="tr-mvp" type="text"></div>
+        <div class="pf"><label>🥇 Campeón real</label><select id="tr-champ"><option value="">—</option></select></div>
+        <div class="pf"><label>🥈 Subcampeón real</label><select id="tr-runner"><option value="">—</option></select></div>
+        <div class="pf"><label>👟 Máx. Goleador</label><select id="tr-scorer"><option value="">—</option></select></div>
+        <div class="pf"><label>🌟 MVP</label><select id="tr-mvp"><option value="">—</option></select></div>
         <div class="pf"><label>🏆 Equipos en Cuartos</label><input id="tr-quarters" type="text" placeholder="España,Brasil..."></div>
         <div class="pf"><label>🏆 Equipos en Semis</label><input id="tr-semis" type="text"></div>
         <button class="btn g" style="margin-top:7px" onclick="saveTR()">Guardar y recalcular</button>
@@ -640,21 +645,23 @@ const SQUADS = {
     {n:12,pos:'GK',name:'Weverton'},
     {n:4,pos:'DF',name:'Marquinhos'},
     {n:3,pos:'DF',name:'Gabriel Magalhães'},
-    {n:2,pos:'DF',name:'Wesley'},
-    {n:6,pos:'DF',name:'Alex Sandro'},
-    {n:13,pos:'DF',name:'Danilo Luiz'},
+    {n:2,pos:'DF',name:'Danilo'},
+    {n:6,pos:'DF',name:'Wendell'},
+    {n:13,pos:'DF',name:'Guilherme Arana'},
     {n:14,pos:'DF',name:'Bremer'},
     {n:5,pos:'MF',name:'Casemiro'},
     {n:8,pos:'MF',name:'Bruno Guimarães'},
     {n:20,pos:'MF',name:'Lucas Paquetá'},
-    {n:17,pos:'MF',name:'Fabinho'},
+    {n:15,pos:'MF',name:'Gerson'},
+    {n:17,pos:'MF',name:'Andreas Pereira'},
     {n:7,pos:'FW',name:'Vinícius Júnior'},
-    {n:10,pos:'FW',name:'Neymar'},
     {n:11,pos:'FW',name:'Raphinha'},
-    {n:9,pos:'FW',name:'Matheus Cunha'},
+    {n:9,pos:'FW',name:'Igor Jesus'},
     {n:22,pos:'FW',name:'Gabriel Martinelli'},
     {n:19,pos:'FW',name:'Endrick'},
-    {n:21,pos:'FW',name:'Luiz Henrique'},
+    {n:10,pos:'FW',name:'Rodrygo'},
+    {n:21,pos:'FW',name:'Savinho'},
+    {n:18,pos:'FW',name:'Luiz Henrique'},
   ],
   '🇲🇦 Marruecos': [
     {n:1,pos:'GK',name:'Yassine Bounou'},
@@ -768,21 +775,26 @@ const SQUADS = {
   ],
   '🇩🇪 Alemania': [
     {n:1,pos:'GK',name:'Manuel Neuer'},
-    {n:12,pos:'GK',name:'Marc-André ter Stegen'},
+    {n:12,pos:'GK',name:'Oliver Baumann'},
+    {n:22,pos:'GK',name:'Alexander Nübel'},
     {n:2,pos:'DF',name:'Joshua Kimmich'},
     {n:4,pos:'DF',name:'Jonathan Tah'},
     {n:5,pos:'DF',name:'Nico Schlotterbeck'},
     {n:3,pos:'DF',name:'David Raum'},
-    {n:6,pos:'DF',name:'Robert Andrich'},
-    {n:8,pos:'MF',name:'Toni Kroos'},
+    {n:21,pos:'DF',name:'Maximilian Mittelstädt'},
+    {n:17,pos:'DF',name:'Benjamin Henrichs'},
+    {n:8,pos:'MF',name:'Robert Andrich'},
+    {n:6,pos:'MF',name:'Pascal Groß'},
     {n:7,pos:'MF',name:'Florian Wirtz'},
     {n:14,pos:'MF',name:'Jamal Musiala'},
     {n:15,pos:'MF',name:'Leon Goretzka'},
+    {n:18,pos:'MF',name:'Angelo Stiller'},
     {n:10,pos:'FW',name:'Kai Havertz'},
     {n:9,pos:'FW',name:'Niclas Füllkrug'},
     {n:11,pos:'FW',name:'Leroy Sané'},
-    {n:13,pos:'FW',name:'Thomas Müller'},
-    {n:17,pos:'FW',name:'Deniz Undav'},
+    {n:19,pos:'FW',name:'Deniz Undav'},
+    {n:20,pos:'FW',name:'Tim Kleindienst'},
+    {n:23,pos:'FW',name:'Maximilian Beier'},
   ],
   '🇨🇼 Curazao': [
     {n:1,pos:'GK',name:'Eloy Room'},
@@ -798,19 +810,24 @@ const SQUADS = {
   '🇳🇱 Países Bajos': [
     {n:1,pos:'GK',name:'Bart Verbruggen'},
     {n:13,pos:'GK',name:'Mark Flekken'},
+    {n:22,pos:'GK',name:'Nick Olij'},
     {n:2,pos:'DF',name:'Denzel Dumfries'},
     {n:4,pos:'DF',name:'Virgil van Dijk'},
     {n:3,pos:'DF',name:'Nathan Aké'},
     {n:5,pos:'DF',name:'Stefan de Vrij'},
     {n:6,pos:'DF',name:'Matthijs de Ligt'},
+    {n:17,pos:'DF',name:'Jurriën Timber'},
     {n:8,pos:'MF',name:'Frenkie de Jong'},
-    {n:7,pos:'MF',name:'Steven Bergwijn'},
     {n:14,pos:'MF',name:'Tijjani Reijnders'},
-    {n:21,pos:'MF',name:'Georginio Wijnaldum'},
+    {n:20,pos:'MF',name:'Mats Wieffer'},
+    {n:15,pos:'MF',name:'Ryan Gravenberch'},
     {n:10,pos:'FW',name:'Memphis Depay'},
-    {n:9,pos:'FW',name:'Wout Weghorst'},
+    {n:7,pos:'FW',name:'Steven Bergwijn'},
+    {n:9,pos:'FW',name:'Brian Brobbey'},
     {n:11,pos:'FW',name:'Cody Gakpo'},
-    {n:17,pos:'FW',name:'Donyell Malen'},
+    {n:18,pos:'FW',name:'Donyell Malen'},
+    {n:19,pos:'FW',name:'Wout Weghorst'},
+    {n:21,pos:'FW',name:'Xavi Simons'},
   ],
   '🇯🇵 Japón': [
     {n:1,pos:'GK',name:'Shuichi Gonda'},
@@ -891,22 +908,28 @@ const SQUADS = {
   '🇪🇸 España': [
     {n:1,pos:'GK',name:'David Raya'},
     {n:13,pos:'GK',name:'Unai Simón'},
+    {n:23,pos:'GK',name:'Alex Remiro'},
     {n:2,pos:'DF',name:'Dani Carvajal'},
-    {n:4,pos:'DF',name:'Nacho Fernández'},
     {n:3,pos:'DF',name:'Alejandro Balde'},
+    {n:4,pos:'DF',name:'Aymeric Laporte'},
     {n:5,pos:'DF',name:'Robin Le Normand'},
     {n:23,pos:'DF',name:'Marc Cucurella'},
-    {n:8,pos:'MF',name:'Pedri'},
+    {n:24,pos:'DF',name:'Pedro Porro'},
     {n:6,pos:'MF',name:'Rodri'},
-    {n:16,pos:'MF',name:'Martín Zubimendi'},
+    {n:8,pos:'MF',name:'Pedri'},
     {n:15,pos:'MF',name:'Mikel Merino'},
+    {n:16,pos:'MF',name:'Martín Zubimendi'},
     {n:14,pos:'MF',name:'Fabián Ruiz'},
-    {n:10,pos:'FW',name:'Dani Olmo'},
+    {n:21,pos:'MF',name:'Dani Olmo'},
+    {n:18,pos:'MF',name:'Álex Baena'},
     {n:7,pos:'FW',name:'Álvaro Morata'},
     {n:9,pos:'FW',name:'Joselu'},
+    {n:10,pos:'FW',name:'Pedri'},
     {n:11,pos:'FW',name:'Ferran Torres'},
     {n:17,pos:'FW',name:'Lamine Yamal'},
     {n:22,pos:'FW',name:'Nico Williams'},
+    {n:19,pos:'FW',name:'Bryan Zaragoza'},
+    {n:20,pos:'FW',name:'Mikel Oyarzabal'},
   ],
   '🇨🇻 Cabo Verde': [
     {n:1,pos:'GK',name:'Vozinha'},
@@ -1013,21 +1036,25 @@ const SQUADS = {
   '🇫🇷 Francia': [
     {n:1,pos:'GK',name:'Mike Maignan'},
     {n:23,pos:'GK',name:'Brice Samba'},
+    {n:16,pos:'GK',name:'Guillaume Restes'},
     {n:2,pos:'DF',name:'Malo Gusto'},
     {n:5,pos:'DF',name:'Jules Koundé'},
     {n:3,pos:'DF',name:'Théo Hernández'},
     {n:4,pos:'DF',name:'William Saliba'},
     {n:24,pos:'DF',name:'Ibrahima Konaté'},
-    {n:6,pos:'DF',name:'Lucas Hernández'},
+    {n:21,pos:'DF',name:'Leny Yoro'},
     {n:8,pos:'MF',name:'Aurélien Tchouaméni'},
     {n:14,pos:'MF',name:'Adrien Rabiot'},
     {n:6,pos:'MF',name:'N\'Golo Kanté'},
     {n:15,pos:'MF',name:'Warren Zaïre-Emery'},
+    {n:18,pos:'MF',name:'Mattéo Guendouzi'},
     {n:7,pos:'FW',name:'Ousmane Dembélé'},
     {n:10,pos:'FW',name:'Kylian Mbappé'},
-    {n:9,pos:'FW',name:'Olivier Giroud'},
+    {n:9,pos:'FW',name:'Randal Kolo Muani'},
     {n:11,pos:'FW',name:'Bradley Barcola'},
     {n:17,pos:'FW',name:'Rayan Cherki'},
+    {n:19,pos:'FW',name:'Michael Olise'},
+    {n:20,pos:'FW',name:'Marcus Thuram'},
   ],
   '🇸🇳 Senegal': [
     {n:1,pos:'GK',name:'Édouard Mendy'},
@@ -1075,23 +1102,27 @@ const SQUADS = {
   ],
   '🇦🇷 Argentina': [
     {n:1,pos:'GK',name:'Emiliano Martínez'},
-    {n:12,pos:'GK',name:'Juan Musso'},
+    {n:12,pos:'GK',name:'Gerónimo Rulli'},
+    {n:23,pos:'GK',name:'Franco Armani'},
     {n:2,pos:'DF',name:'Gonzalo Montiel'},
     {n:3,pos:'DF',name:'Nicolás Tagliafico'},
     {n:4,pos:'DF',name:'Germán Pezzella'},
     {n:6,pos:'DF',name:'Lisandro Martínez'},
     {n:13,pos:'DF',name:'Cristian Romero'},
     {n:19,pos:'DF',name:'Nicolás Otamendi'},
+    {n:26,pos:'DF',name:'Nahuel Molina'},
     {n:8,pos:'MF',name:'Enzo Fernández'},
     {n:5,pos:'MF',name:'Leandro Paredes'},
     {n:7,pos:'MF',name:'Rodrigo De Paul'},
     {n:14,pos:'MF',name:'Exequiel Palacios'},
     {n:25,pos:'MF',name:'Alexis Mac Allister'},
+    {n:18,pos:'MF',name:'Giovani Lo Celso'},
     {n:10,pos:'FW',name:'Lionel Messi'},
     {n:9,pos:'FW',name:'Julián Álvarez'},
     {n:11,pos:'FW',name:'Ángel Di María'},
     {n:22,pos:'FW',name:'Lautaro Martínez'},
     {n:23,pos:'FW',name:'Paulo Dybala'},
+    {n:16,pos:'FW',name:'Thiago Almada'},
   ],
   '🇩🇿 Argelia': [
     {n:1,pos:'GK',name:'Raïs M\'Bolhi'},
@@ -1138,21 +1169,25 @@ const SQUADS = {
   '🇵🇹 Portugal': [
     {n:1,pos:'GK',name:'Rui Patrício'},
     {n:12,pos:'GK',name:'Diogo Costa'},
+    {n:22,pos:'GK',name:'José Sá'},
     {n:2,pos:'DF',name:'João Cancelo'},
     {n:3,pos:'DF',name:'Nuno Mendes'},
     {n:4,pos:'DF',name:'Rúben Dias'},
-    {n:5,pos:'DF',name:'Pepe'},
+    {n:5,pos:'DF',name:'Gonçalo Inácio'},
     {n:6,pos:'DF',name:'Danilo Pereira'},
-    {n:8,pos:'MF',name:'João Moutinho'},
+    {n:21,pos:'DF',name:'Nelson Semedo'},
+    {n:8,pos:'MF',name:'João Neves'},
     {n:14,pos:'MF',name:'William Carvalho'},
     {n:16,pos:'MF',name:'Vitinha'},
     {n:10,pos:'MF',name:'Bernardo Silva'},
-    {n:8,pos:'MF',name:'Bruno Fernandes'},
+    {n:18,pos:'MF',name:'Bruno Fernandes'},
+    {n:19,pos:'MF',name:'Rúben Neves'},
     {n:7,pos:'FW',name:'Cristiano Ronaldo'},
-    {n:9,pos:'FW',name:'André Silva'},
+    {n:9,pos:'FW',name:'Gonçalo Ramos'},
     {n:11,pos:'FW',name:'Rafael Leão'},
     {n:17,pos:'FW',name:'Pedro Neto'},
     {n:23,pos:'FW',name:'João Félix'},
+    {n:20,pos:'FW',name:'Francisco Conceição'},
   ],
   '🇺🇿 Uzbekistán': [
     {n:1,pos:'GK',name:'Utkir Yusupov'},
@@ -1244,20 +1279,27 @@ const SQUADS = {
   '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra': [
     {n:1,pos:'GK',name:'Jordan Pickford'},
     {n:13,pos:'GK',name:'Nick Pope'},
+    {n:22,pos:'GK',name:'Dean Henderson'},
     {n:2,pos:'DF',name:'Trent Alexander-Arnold'},
     {n:5,pos:'DF',name:'John Stones'},
     {n:3,pos:'DF',name:'Luke Shaw'},
     {n:4,pos:'DF',name:'Marc Guehi'},
     {n:6,pos:'DF',name:'Harry Maguire'},
+    {n:12,pos:'DF',name:'Kyle Walker'},
+    {n:21,pos:'DF',name:'Ezri Konsa'},
     {n:8,pos:'MF',name:'Declan Rice'},
     {n:7,pos:'MF',name:'Jack Grealish'},
     {n:14,pos:'MF',name:'Kieran Trippier'},
     {n:15,pos:'MF',name:'Phil Foden'},
+    {n:16,pos:'MF',name:'Conor Gallagher'},
+    {n:18,pos:'MF',name:'Adam Wharton'},
     {n:10,pos:'FW',name:'Jude Bellingham'},
     {n:9,pos:'FW',name:'Harry Kane'},
     {n:11,pos:'FW',name:'Bukayo Saka'},
-    {n:17,pos:'FW',name:'Rashford'},
-    {n:20,pos:'FW',name:'Ollie Watkins'},
+    {n:17,pos:'FW',name:'Cole Palmer'},
+    {n:19,pos:'FW',name:'Ollie Watkins'},
+    {n:20,pos:'FW',name:'Anthony Gordon'},
+    {n:23,pos:'FW',name:'Eberechi Eze'},
   ],
 };
 
@@ -1330,12 +1372,24 @@ async function initApp(){
   await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
   renderAll();setSS('ok','Sincronizado');startRT();startLive();
 }
-function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();}
+function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBracket();populateFinalPredSelects(S.finalPreds?.user_id?S.finalPreds:null);}
 
 // DATA
 async function loadMatches(){const{data}=await sb.from('matches').select('*').order('match_date');S.matches=data||[];}
 async function loadPreds(){const{data}=await sb.from('predictions').select('*').eq('user_id',S.userId);S.preds={};(data||[]).forEach(p=>{S.preds[p.match_id]={home:p.home_pred,away:p.away_pred};});}
-async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};if(data){const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('fp-champ',data.champion);s('fp-runner',data.runner_up);s('fp-scorer',data.top_scorer);s('fp-mvp',data.mvp);}}
+async function loadFinalPreds(){const{data}=await sb.from('final_predictions').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.finalPreds=data||{};populateFinalPredSelects(data);}
+function populateFinalPredSelects(data){
+  // Populate team selects
+  const teamOpts=TEAMS.map(t=>`<option value="${t}">${t}</option>`).join('');
+  ['fp-champ','fp-runner'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">— Selecciona —</option>'+teamOpts;el.dataset.filled='1';}});
+  // Populate player selects - all players from all squads
+  let allPlayers=[];Object.entries(SQUADS).forEach(([team,squad])=>{squad.forEach(p=>{allPlayers.push({name:p.name,team,pos:p.pos});});});
+  allPlayers.sort((a,b)=>a.name.localeCompare(b.name));
+  const playerOpts=allPlayers.map(p=>`<option value="${p.name}">${p.name} (${p.team.replace(/^[^\s]+ /,'')})</option>`).join('');
+  ['fp-scorer','fp-mvp'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">— Selecciona —</option>'+playerOpts;el.dataset.filled='1';}});
+  // Set values
+  if(data){const s=(id,v)=>{const el=document.getElementById(id);if(el&&v){el.value=v;if(!el.value){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v;}}};s('fp-champ',data.champion);s('fp-runner',data.runner_up);s('fp-scorer',data.top_scorer);s('fp-mvp',data.mvp);}
+}
 async function loadFantasy(){const{data}=await sb.from('fantasy').select('*').eq('user_id',S.userId).eq('group_id',S.groupId).single();S.fantasy=data||null;}
 async function loadAllUsers(){const{data}=await sb.from('users').select('*').eq('group_id',S.groupId);S.allUsers=data||[];}
 async function loadAllFantasy(){const{data}=await sb.from('fantasy').select('*').eq('group_id',S.groupId);S.allFantasy=data||[];}
@@ -1459,6 +1513,20 @@ function renderLive(){
       return`<div class="mc"><div class="mh"><span class="mph">${m.phase==='Grupos'?'Gr '+m.group_code:m.phase}</span><span class="mm">${dStr} · ${tStr}h · ${m.stadium||''}</span>${hasPred?'<span style="font-size:9px;color:var(--acc)">✓ Apostado</span>':''}</div><div class="pr"><div class="mteams"><span class="tn">${m.home}</span><span class="vs">vs</span><span class="tn r">${m.away}</span></div></div></div>`;
     }).join('');
   }
+  // Recent results
+  const recentEl=document.getElementById('recentResults');
+  if(recentEl){
+    const finished=S.matches.filter(m=>m.status==='FINISHED').sort((a,b)=>new Date(b.match_date)-new Date(a.match_date)).slice(0,8);
+    if(!finished.length){recentEl.innerHTML='<p style="color:var(--mut);font-size:12px;padding:8px 0">Sin resultados todavía</p>';}
+    else{
+      recentEl.innerHTML=finished.map(m=>{
+        const pred=S.preds[m.id]||{};
+        const pts=pred.home!==undefined?calcM({home:pred.home,away:pred.away},{home:m.home_score,away:m.away_score}):null;
+        const badge=pts!==null?(pts===3?'<span class="rb ok">+3</span>':pts===1?'<span class="rb par">+1</span>':'<span class="rb no">0</span>'):'';
+        return`<div class="mc fin"><div class="mh"><span class="mph">${m.phase==='Grupos'?'Gr '+m.group_code:m.phase}</span><span style="font-size:9px;color:var(--green)">✓ Final</span>${badge}</div><div class="pr"><div class="mteams"><span class="tn">${m.home}</span><span class="vs">vs</span><span class="tn r">${m.away}</span></div><span class="fsc">${m.home_score}—${m.away_score}</span></div></div>`;
+      }).join('');
+    }
+  }
 }
 
 // ── QUINIELA — LOCK ROBUSTO ────────────────────────────────────────
@@ -1475,7 +1543,16 @@ function isLocked(m){
   }
   return false;
 }
-function isTBD(s){return s&&(s.startsWith('W-')||s.startsWith('L-')||/^[12][A-L]$/.test(s)||s.includes('/'));}
+function isTBD(s){return s&&(s.startsWith('W-')||s.startsWith('L-')||/^[12][A-L]$/.test(s)||/^3er/.test(s)||s.includes('/'));}
+function fmtTBD(s){
+  if(!s)return s;
+  if(/^1([A-L])$/.test(s)){const g=s.match(/^1([A-L])$/)[1];return`1º Grupo ${g}`;}
+  if(/^2([A-L])$/.test(s)){const g=s.match(/^2([A-L])$/)[1];return`2º Grupo ${g}`;}
+  if(/^W-(\d+)$/.test(s)){const n=s.match(/^W-(\d+)$/)[1];return`Ganador P${n}`;}
+  if(/^L-(\d+)$/.test(s)){const n=s.match(/^L-(\d+)$/)[1];return`Perdedor P${n}`;}
+  if(/^3er/.test(s))return`3er mejor (${s.replace('3er ','')})`;
+  return s;
+}
 
 function renderMatches(){
   const list=document.getElementById('matchesList');if(!list)return;
@@ -1505,7 +1582,9 @@ function renderMatches(){
     const tStr=m.match_date?new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';
     let cls='mc';if(fin)cls+=' fin';else if(live)cls+=' lv';if(isElim)cls+=' elim';
     const c=document.createElement('div');c.className=cls;c.dataset.phase=m.phase;
-    c.innerHTML=`<div class="mh">${phB}<span class="mm">${tStr}h · ${m.stadium||''}</span>${live?`<span class="lbadge">🔴 VIVO${m.minute?' '+m.minute+"'":''}`:``}${fin?'<span style="font-size:9px;color:var(--green)">✓ Final</span>':''}${locked&&!fin&&!live?'<span class="lock-badge">🔒 Cerrado</span>':''}</div><div class="pr"><div class="mteams"><span class="tn">${m.home}</span><span class="vs">vs</span><span class="tn r">${m.away}</span></div>${score}${badge}<span class="psv" id="sv${m.id}"></span></div>`;
+    const dispH=tbdH?fmtTBD(m.home):m.home;
+    const dispA=tbdA?fmtTBD(m.away):m.away;
+    c.innerHTML=`<div class="mh">${phB}<span class="mm">${tStr}h · ${m.stadium||''}</span>${live?`<span class="lbadge">🔴 VIVO${m.minute?' '+m.minute+"'":''}`:``}${fin?'<span style="font-size:9px;color:var(--green)">✓ Final</span>':''}${locked&&!fin&&!live?'<span class="lock-badge">🔒 Cerrado</span>':''}</div><div class="pr"><div class="mteams"><span class="tn">${dispH}</span><span class="vs">vs</span><span class="tn r">${dispA}</span></div>${score}${badge}<span class="psv" id="sv${m.id}"></span></div>`;
     list.appendChild(c);
   });
 }
@@ -1526,7 +1605,11 @@ async function savePred(mid,side,val){
   dbLog(`Pred saved: match ${mid} → ${p.home}-${p.away}`);
 }
 async function saveFinalPreds(){
-  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:document.getElementById('fp-champ').value.trim(),runner_up:document.getElementById('fp-runner').value.trim(),top_scorer:document.getElementById('fp-scorer').value.trim(),mvp:document.getElementById('fp-mvp').value.trim(),updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
+  const champ=document.getElementById('fp-champ')?.value.trim();
+  const runner=document.getElementById('fp-runner')?.value.trim();
+  const scorer=document.getElementById('fp-scorer')?.value.trim();
+  const mvp=document.getElementById('fp-mvp')?.value.trim();
+  const{error}=await sb.from('final_predictions').upsert({user_id:S.userId,group_id:S.groupId,champion:champ,runner_up:runner,top_scorer:scorer,mvp:mvp,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
   if(error){toast('Error: '+error.message,'err');return;}await loadFinalPreds();toast('¡Predicciones guardadas! 🏆');
 }
 
@@ -1577,17 +1660,19 @@ function renderBracketKO(){
     const scoreA=fin||live?(m.away_score??0):tbdA?'':'—';
     const border=fin?'rgba(46,204,113,.35)':live?'rgba(231,76,60,.6)':'#2a2a3f';
     const d=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):(m._date||'');
+    const labelH=tbdH?fmtTBD(m.home):m.home;
+    const labelA=tbdA?fmtTBD(m.away):m.away;
     return`<div style="background:#1a1a26;border:1px solid ${border};border-radius:8px;width:134px;font-size:10px;overflow:hidden;flex-shrink:0">
       <div style="background:#12121a;padding:2px 6px;font-size:9px;color:#6b6b88;display:flex;justify-content:space-between">
         <span>${d}</span><span style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap;max-width:70px">${m.stadium||''}</span>
       </div>
       <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wH?'rgba(245,200,66,.07)':'transparent'}">
-        <span style="color:${tbdH?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdH?'italic':'normal'}">${m.home}</span>
+        <span style="color:${tbdH?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdH?'italic':'normal'}">${labelH}</span>
         <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wH?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreH}</span>
       </div>
       <div style="height:1px;background:#2a2a3f"></div>
       <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wA?'rgba(245,200,66,.07)':'transparent'}">
-        <span style="color:${tbdA?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdA?'italic':'normal'}">${m.away}</span>
+        <span style="color:${tbdA?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdA?'italic':'normal'}">${labelA}</span>
         <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wA?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreA}</span>
       </div>
       ${live?'<div style="background:var(--red);color:#fff;font-size:8px;font-weight:700;text-align:center;padding:2px">🔴 EN VIVO</div>':''}
@@ -1598,7 +1683,7 @@ function renderBracketKO(){
   const R32_H=CARD_H+4; // per-match slot height
 
   // Build the bracket as a scrollable horizontal flex layout
-  let html='<div style="overflow-x:auto;padding-bottom:8px"><div style="display:flex;align-items:flex-start;gap:0;min-width:800px">';
+  let html='<div style="overflow-x:auto;padding-bottom:16px;-webkit-overflow-scrolling:touch"><div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:8px 4px">';
 
   phases.forEach((ph,pi)=>{
     const ms=getPhaseMatches(ph);
@@ -1673,26 +1758,29 @@ function renderFantasyForm(){
   }else{
     const teamOpts=TEAMS.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');
     const posLabels={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
-    // Load from DB cache (loaded by onTeamChange) or inline SQUADS fallback
-    const dbSquad=f?.team&&S._players?.[f.team];
-    const inlineSquad=f?.team?SQUADS[f.team]||[]:[];
-    const rawSquad=dbSquad||inlineSquad.map(p=>({name:p.name,number:p.n,position:p.pos}));
+    // Player team can be different from fantasy team
+    const playerTeam=f?._playerTeam||(f?.team)||'';
+    const playerTeamOpts=TEAMS.map(t=>`<option value="${t}"${playerTeam===t?' selected':''}>${t}</option>`).join('');
+    const inlineSquad=playerTeam?SQUADS[playerTeam]||[]:[];
     let playerOpts='<option value="">— Elige jugador —</option>';
     let lastPos='';
-    rawSquad.forEach(p=>{
-      const pos=p.position||p.pos;
+    inlineSquad.forEach(p=>{
+      const pos=p.pos;
       if(pos!==lastPos){playerOpts+=`<optgroup label="${posLabels[pos]||pos}">`;lastPos=pos;}
-      const num=p.number||p.n||0;
       const selected=(f?.player===p.name)?' selected':'';
-      playerOpts+=`<option value="${p.name}" data-num="${num}"${selected}>#${num} ${p.name}</option>`;
+      playerOpts+=`<option value="${p.name}" data-num="${p.n}"${selected}>#${p.n} ${p.name}</option>`;
     });
     area.innerHTML=`
-    <div class="pf"><label>🌍 Tu equipo</label>
+    <div class="pf"><label>🌍 Tu equipo (fantasy)</label>
       <select id="fTeam" onchange="onTeamChange(this.value)"><option value="">— Elige —</option>${teamOpts}</select>
     </div>
-    ${f?.team?`<div class="pf"><label>⭐ Tu jugador</label>
+    <div class="pf" style="font-size:10px;color:var(--mut);padding:0 0 4px 125px">⚡ El jugador puede ser de cualquier equipo</div>
+    <div class="pf"><label>🏳️ Equipo del jugador</label>
+      <select id="fPlayerTeam" onchange="onPlayerTeamChange(this.value)"><option value="">— Elige equipo —</option>${playerTeamOpts}</select>
+    </div>
+    ${playerTeam?`<div class="pf"><label>⭐ Tu jugador</label>
       <select id="fPlayer"><option value="">— Elige jugador —</option>${playerOpts}</select>
-    </div>`:'<div class="pf" style="color:var(--mut);font-size:12px">← Elige primero el equipo para ver los jugadores</div>'}
+    </div>`:'<div class="pf" style="color:var(--mut);font-size:12px">← Elige primero el equipo del jugador</div>'}
     ${unl?'<div class="unlockb">🔓 Desbloqueado por admin</div>':''}
     <button class="btn g" onclick="saveFantasy()" style="margin-top:9px">${locked&&unl?'🔓 Guardar nueva elección':'🔒 Guardar y bloquear'}</button>
     ${!locked?'<p style="font-size:10px;color:var(--mut);margin-top:5px">⚠️ Una vez guardado no podrás cambiarlo sin el admin</p>':''}`;
@@ -1700,22 +1788,23 @@ function renderFantasyForm(){
   renderFantasyRanking();
 }
 async function onTeamChange(team){
-  if(S.fantasy)S.fantasy={...S.fantasy,team,player:'',player_number:0};
+  if(S.fantasy)S.fantasy={...S.fantasy,team};
   else S.fantasy={team,player:'',locked:false};
-  // Load players from DB for this team
-  if(team&&!S._players)S._players={};
-  if(team&&!S._players[team]){
-    const{data}=await sb.from('players').select('*').eq('team',team).order('position').order('number');
-    S._players[team]=data||[];
-  }
+  renderFantasyForm();
+}
+async function onPlayerTeamChange(playerTeam){
+  // Player can be from any team, separate from the fantasy team chosen
+  if(S.fantasy)S.fantasy={...S.fantasy,_playerTeam:playerTeam,player:'',player_number:0};
+  else S.fantasy={_playerTeam:playerTeam,player:'',locked:false};
   renderFantasyForm();
 }
 async function saveFantasy(){
   const team=document.getElementById('fTeam')?.value;
   const playerSel=document.getElementById('fPlayer');
   const player=playerSel?.value.trim();
-  if(!team||!player){toast('Elige equipo y jugador','err');return;}
+  if(!team||!player){toast('Elige equipo fantasy y jugador','err');return;}
   const playerNum=parseInt(playerSel?.selectedOptions?.[0]?.dataset?.num)||0;
+  const playerTeam=document.getElementById('fPlayerTeam')?.value||team;
   const{error}=await sb.from('fantasy').upsert({user_id:S.userId,group_id:S.groupId,team,player,player_number:playerNum,locked:true,unlocked_by_admin:false,player_goals:S.fantasy?.player_goals||0,player_assists:S.fantasy?.player_assists||0,updated_at:new Date().toISOString()},{onConflict:'user_id,group_id'});
   if(error){toast('Error: '+error.message,'err');return;}
   await loadFantasy();await loadAllFantasy();
@@ -1822,7 +1911,22 @@ function renderAdminMatches(){const ct=document.getElementById('adminMatches');i
 async function saveRes(mid){const h=parseInt(document.getElementById('rh-'+mid)?.value),a=parseInt(document.getElementById('ra-'+mid)?.value);if(isNaN(h)||isNaN(a)){toast('Introduce ambos goles','err');return;}const{error}=await sb.from('matches').update({home_score:h,away_score:a,status:'FINISHED',updated_at:new Date().toISOString()}).eq('id',mid);if(error){toast('Error','err');return;}toast('✓ Resultado guardado');S._allPreds=null;await loadMatches();renderAdminMatches();renderAll();}
 async function unsetRes(mid){await sb.from('matches').update({home_score:null,away_score:null,status:'SCHEDULED',updated_at:new Date().toISOString()}).eq('id',mid);await loadMatches();renderAdminMatches();renderAll();toast('Resultado eliminado','info');}
 async function saveTR(){const{error}=await sb.from('tournament_results').upsert({group_id:S.groupId,champion:document.getElementById('tr-champ').value.trim(),runner_up:document.getElementById('tr-runner').value.trim(),top_scorer:document.getElementById('tr-scorer').value.trim(),mvp:document.getElementById('tr-mvp').value.trim(),quarter_teams:document.getElementById('tr-quarters').value?document.getElementById('tr-quarters').value.split(',').map(s=>s.trim()):[],semi_teams:document.getElementById('tr-semis').value?document.getElementById('tr-semis').value.split(',').map(s=>s.trim()):[],updated_at:new Date().toISOString()},{onConflict:'group_id'});if(error){toast('Error','err');return;}await loadTR();S._allPreds=null;renderRk(S.rkMode);renderFantasyRanking();toast('¡Datos del torneo guardados! 🏆');}
-function loadTRForm(){const tr=S.tr||{};const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};s('tr-champ',tr.champion);s('tr-runner',tr.runner_up);s('tr-scorer',tr.top_scorer);s('tr-mvp',tr.mvp);s('tr-quarters',(tr.quarter_teams||[]).join(','));s('tr-semis',(tr.semi_teams||[]).join(','));}
+function loadTRForm(){
+  const tr=S.tr||{};
+  // Populate team selects
+  const teamOpts=TEAMS.map(t=>`<option value="${t}">${t}</option>`).join('');
+  ['tr-champ','tr-runner'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">—</option>'+teamOpts;el.dataset.filled='1';}});
+  // Populate player selects
+  let allPlayers=[];Object.entries(SQUADS).forEach(([team,squad])=>{squad.forEach(p=>{allPlayers.push({name:p.name,team});});});
+  allPlayers.sort((a,b)=>a.name.localeCompare(b.name));
+  const playerOpts=allPlayers.map(p=>`<option value="${p.name}">${p.name} (${p.team.replace(/^[^\s]+ /,'')})</option>`).join('');
+  ['tr-scorer','tr-mvp'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.filled){el.innerHTML='<option value="">—</option>'+playerOpts;el.dataset.filled='1';}});
+  // Set values
+  const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v){el.value=v;if(!el.value){const opt=document.createElement('option');opt.value=v;opt.textContent=v;el.appendChild(opt);el.value=v;}}};
+  setV('tr-champ',tr.champion);setV('tr-runner',tr.runner_up);setV('tr-scorer',tr.top_scorer);setV('tr-mvp',tr.mvp);
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  s('tr-quarters',(tr.quarter_teams||[]).join(','));s('tr-semis',(tr.semi_teams||[]).join(','));
+}
 function renderAdminGoals(){
   const el=document.getElementById('adminGoals');if(!el)return;
   const us=S.allUsers.filter(u=>S.allFantasy.find(f=>f.user_id===u.id)?.player);
