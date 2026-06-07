@@ -357,6 +357,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button onclick="showPanel('fantasy',this)">⚽ Fantasy</button>
     <button onclick="showPanel('stats',this)">📊 Stats</button>
     <button onclick="showPanel('historial',this)">🕒 Historial</button>
+    <button onclick="showPanel('grupo',this)">👥 Grupo</button>
     <button onclick="showPanel('ranking',this)">🏅 Ranking</button>
     <button onclick="showPanel('admin',this)">🔧 Admin</button>
   </nav>
@@ -458,6 +459,16 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
       <button class="it" onclick="showHistorial('resultados',this)">⚽ Resultados</button>
     </div>
     <div id="historialContent"></div>
+  </div>
+
+  <!-- GRUPO -->
+  <div class="panel" id="panel-grupo">
+    <div class="stitle">👥 Elecciones del grupo</div>
+    <div class="itabs" id="grupo-tabs">
+      <button class="it active" onclick="showGrupo('fantasy',this)">⚽ Fantasy</button>
+      <button class="it" onclick="showGrupo('predicciones',this)">🏆 Predicciones</button>
+    </div>
+    <div id="grupoContent"></div>
   </div>
 
   <!-- RANKING -->
@@ -830,6 +841,7 @@ function startRT(){
     .on('postgres_changes',{event:'*',schema:'public',table:'matches'},async()=>{
       setSS('sync','⚡ Cambio detectado...');await loadMatches();renderAll();renderRk(S.rkMode);renderFantasyRanking();
       setSS('ok','⚡ Actualizado en tiempo real');computeTRFromMatches();liveSecs=REFRESH_SECS;updateTimerUI();dbLog('Realtime update recibido');
+      if(document.getElementById('panel-grupo')?.classList.contains('active'))renderGrupo();
     })
     .on('postgres_changes',{event:'*',schema:'public',table:'fantasy',filter:'group_id=eq.'+S.groupId},async()=>{await loadFantasy();await loadAllFantasy();renderFantasyForm();renderFantasyRanking();})
     .subscribe();
@@ -1450,7 +1462,140 @@ async function renderStats(){
     </div>`;
   }).join('');
 }
-function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();if(id==='stats')renderStats();if(id==='historial'){histMode='torneos';renderHistorial();}if(id==='quiniela'){renderFinalPredsForm();}}
+
+// ── GRUPO — ver elecciones de todos ──────────────────────────────
+let grupoMode='fantasy';
+function showGrupo(mode,btn){
+  grupoMode=mode;
+  document.querySelectorAll('#grupo-tabs .it').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderGrupo();
+}
+function renderGrupo(){
+  const el=document.getElementById('grupoContent');if(!el)return;
+  if(grupoMode==='fantasy') renderGrupoFantasy(el);
+  else renderGrupoPredicciones(el);
+}
+function renderGrupoFantasy(el){
+  if(!S.allUsers.length){el.innerHTML='<div class="empty"><div class="ic">👥</div><p>Nadie en el grupo aún</p></div>';return;}
+  el.innerHTML=S.allUsers.map(u=>{
+    const f=S.allFantasy.find(x=>x.user_id===u.id);
+    const isMe=u.id===S.userId;
+    const pts=calcFPts(u.id);
+    if(!f?.team&&!f?.player){
+      return`<div class="rc" style="${isMe?'border-color:var(--acc)':''}">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--sur);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
+        <div style="flex:1">
+          <div class="rn">${u.username}${isMe?' <span style="font-size:9px;color:var(--acc)">TÚ</span>':''}</div>
+          <div class="rs" style="color:var(--mut);font-style:italic">Aún no ha elegido</div>
+        </div>
+      </div>`;
+    }
+    const locked=f?.locked;
+    return`<div class="rc" style="${isMe?'border-color:var(--acc)':''}">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--bor);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">
+        ${f?.team?.split(' ')[0]||'🏳️'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="rn">${u.username}${isMe?' <span style="font-size:9px;color:var(--acc)">TÚ</span>':''}${locked?' <span style="font-size:9px;color:var(--mut)">🔒</span>':''}</div>
+        <div style="font-size:11px;color:var(--txt);margin-top:1px">${f?.team||'—'}</div>
+        <div style="font-size:10px;color:var(--mut);margin-top:1px">
+          ${f?.player_number?'#'+f.player_number+' ':''}${f?.player||'Sin jugador'}
+          ${f?.player_team&&f?.player_team!==f?.team?`<span style="color:var(--mut)">(${f.player_team})</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap">
+          ${f?.player_goals?`<span style="font-size:9px;background:rgba(46,204,113,.15);color:var(--green);padding:1px 5px;border-radius:10px">⚽ ${f.player_goals} goles</span>`:''}
+          ${f?.player_assists?`<span style="font-size:9px;background:rgba(74,144,217,.15);color:var(--blue);padding:1px 5px;border-radius:10px">🅰️ ${f.player_assists} asist.</span>`:''}
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">${pts}</div>
+        <div style="font-size:9px;color:var(--mut)">pts fantasy</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function renderGrupoPredicciones(el){
+  // Load all final preds if not loaded
+  if(!S.allFinalPreds.length) await loadAllFinalPreds();
+  const tr=S.tr||{};
+  const hasResults=tr.champion||tr.runner_up||tr.top_scorer||tr.mvp;
+  if(!S.allUsers.length){el.innerHTML='<div class="empty"><div class="ic">🏆</div><p>Nadie en el grupo aún</p></div>';return;}
+  // Header showing real results if available
+  let headerHtml='';
+  if(hasResults){
+    headerHtml=`<div style="background:var(--card);border:1px solid rgba(245,200,66,.3);border-radius:10px;padding:11px;margin-bottom:12px;font-size:11px">
+      <div style="font-weight:700;color:var(--gold);margin-bottom:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px">RESULTADOS REALES</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        ${tr.champion?`<div style="background:var(--bg);border-radius:7px;padding:6px 8px"><div style="font-size:9px;color:var(--mut)">🥇 CAMPEÓN</div><div style="font-weight:700;color:var(--gold)">${tr.champion}</div></div>`:''}
+        ${tr.runner_up?`<div style="background:var(--bg);border-radius:7px;padding:6px 8px"><div style="font-size:9px;color:var(--mut)">🥈 SUBCAMPEÓN</div><div style="font-weight:600">${tr.runner_up}</div></div>`:''}
+        ${tr.top_scorer?`<div style="background:var(--bg);border-radius:7px;padding:6px 8px"><div style="font-size:9px;color:var(--mut)">👟 GOLEADOR</div><div style="font-weight:600">${tr.top_scorer}</div></div>`:''}
+        ${tr.mvp?`<div style="background:var(--bg);border-radius:7px;padding:6px 8px"><div style="font-size:9px;color:var(--mut)">🌟 MVP</div><div style="font-weight:600">${tr.mvp}</div></div>`:''}
+      </div>
+    </div>`;
+  }
+  const rows=S.allUsers.map(u=>{
+    const fp=S.allFinalPreds.find(f=>f.user_id===u.id)||{};
+    const isMe=u.id===S.userId;
+    const hasAny=fp.champion||fp.runner_up||fp.top_scorer||fp.mvp;
+    // Check each prediction
+    function check(pred,real){
+      if(!real||!pred)return '';
+      return norm(pred)===norm(real)
+        ?'<span style="color:var(--green);font-size:10px">✓</span>'
+        :'<span style="color:var(--red);font-size:10px">✗</span>';
+    }
+    if(!hasAny){
+      return`<div class="rc" style="${isMe?'border-color:var(--acc)':''}">
+        <div style="flex:1"><div class="rn">${u.username}${isMe?' <span style="font-size:9px;color:var(--acc)">TÚ</span>':''}</div>
+        <div class="rs" style="font-style:italic">Sin predicciones</div></div>
+      </div>`;
+    }
+    const pts=calcQPts(u.id);
+    return`<div class="rc" style="${isMe?'border-color:var(--acc)':''}">
+      <div style="flex:1;min-width:0">
+        <div class="rn" style="margin-bottom:5px">${u.username}${isMe?' <span style="font-size:9px;color:var(--acc)">TÚ</span>':''}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px">
+          <div style="background:var(--bg);border-radius:6px;padding:5px 7px">
+            <div style="font-size:9px;color:var(--mut)">🥇 Campeón</div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;margin-top:1px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fp.champion||'—'}</span>
+              ${check(fp.champion,tr.champion)}
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:5px 7px">
+            <div style="font-size:9px;color:var(--mut)">🥈 Subcampeón</div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;margin-top:1px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fp.runner_up||'—'}</span>
+              ${check(fp.runner_up,tr.runner_up)}
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:5px 7px">
+            <div style="font-size:9px;color:var(--mut)">👟 Goleador</div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;margin-top:1px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fp.top_scorer||'—'}</span>
+              ${check(fp.top_scorer,tr.top_scorer)}
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:5px 7px">
+            <div style="font-size:9px;color:var(--mut)">🌟 MVP</div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;margin-top:1px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fp.mvp||'—'}</span>
+              ${check(fp.mvp,tr.mvp)}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">${pts}</div>
+        <div style="font-size:9px;color:var(--mut)">pts quiniela</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML=headerHtml+rows;
+}
+
+function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();if(id==='stats')renderStats();if(id==='historial'){histMode='torneos';renderHistorial();}if(id==='quiniela'){renderFinalPredsForm();}if(id==='grupo'){grupoMode='fantasy';renderGrupo();}}
 function showRk(mode,btn){S.rkMode=mode;document.querySelectorAll('#panel-ranking .it').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderRk(mode);}
 function filterM(ph,btn){document.querySelectorAll('#panel-quiniela .it').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');document.querySelectorAll('.mc').forEach(c=>{c.style.display=(ph==='all'||c.dataset.phase===ph)?'':'none';});}
 async function renderRk(mode){const el=document.getElementById('globalRank');if(!el)return;if(!S._allPreds)S._allPreds=await loadAllPreds();const s=S.allUsers.map(u=>{const q=calcQPts(u.id),f=calcFPts(u.id);return{name:u.username,q,f,total:q+f};}).sort((a,b)=>mode==='quiniela'?b.q-a.q:mode==='fantasy'?b.f-a.f:b.total-a.total);if(!s.length){el.innerHTML='<div class="empty"><div class="ic">🏅</div><p>Sois solo tú por ahora</p></div>';return;}const mp=u=>mode==='quiniela'?u.q:mode==='fantasy'?u.f:u.total;el.innerHTML=s.map((u,i)=>`<div class="rc"><div class="rp ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i+1}</div><div style="flex:1"><div class="rn">${u.name}</div><div class="rtags"><span class="rtag m">🎯 ${u.q}</span><span class="rtag f">⚽ ${u.f}</span></div></div><div class="rpts">${mp(u)}<span style="font-size:10px;color:var(--mut)"> pts</span></div></div>`).join('');}
