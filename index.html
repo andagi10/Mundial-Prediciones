@@ -701,6 +701,7 @@ async function initApp(){
   await loadTournament();await Promise.all([loadMatches(),loadPreds(),loadFinalPreds(),loadFantasy(),loadAllUsers(),loadAllFantasy(),loadAllFinalPreds(),loadTR()]);
   // Load players FIRST, then render forms that depend on them
   setSS('sync','Cargando jugadores...');
+  S._allPlayers=null; // Reset cache so it reloads for this tournament
   await loadAllPlayersFromDB();
   renderAll();
   setSS('ok','Sincronizado');
@@ -711,8 +712,19 @@ function renderAll(){renderLive();renderMatches();renderFantasyForm();renderBrac
 
 // DATA
 async function loadTournament(){
-  const{data}=await sb.from('tournaments').select('*').eq('active',true).single();
-  S.tournament=data||null;S.tournamentId=data?.id||null;
+  const{data,error}=await sb.from('tournaments').select('*').eq('active',true).single();
+  if(error){
+    console.warn('[Tournament] No active tournament found:',error.message);
+    // Fallback: get the most recent tournament
+    const{data:fallback}=await sb.from('tournaments').select('*').order('api_season',{ascending:false}).limit(1).single();
+    S.tournament=fallback||null;
+    S.tournamentId=fallback?.id||null;
+    console.log('[Tournament] Fallback:',S.tournament?.short_name,'id:',S.tournamentId);
+  }else{
+    S.tournament=data||null;
+    S.tournamentId=data?.id||null;
+    console.log('[Tournament] Active:',S.tournament?.short_name,'id:',S.tournamentId);
+  }
 }
 async function loadMatches(){
   let q=sb.from('matches').select('*').order('match_date');
@@ -1367,13 +1379,25 @@ async function loadPlayersFromDB(team){
 }
 async function loadAllPlayersFromDB(){
   if(S._allPlayers&&S._allPlayers.length)return S._allPlayers;
-  let q=sb.from('players').select('number,name,position,team').order('team').order('position').order('number');
-  if(S.tournamentId)q=q.eq('tournament_id',S.tournamentId);
-  const{data,error}=await q;
-  if(error){console.error('loadAllPlayersFromDB:',error.message);S._allPlayers=[];return[];}
-  S._allPlayers=data||[];
-  console.log('Players loaded from DB:',S._allPlayers.length,'for tournament:',S.tournamentId);
-  return S._allPlayers;
+  try{
+    let q=sb.from('players').select('number,name,position,team,tournament_id').order('team').order('position').order('number');
+    // Only filter by tournament if we have a valid ID
+    if(S.tournamentId){
+      q=q.eq('tournament_id',S.tournamentId);
+    }
+    const{data,error}=await q;
+    if(error)throw error;
+    S._allPlayers=data||[];
+    console.log('[Players] Loaded:',S._allPlayers.length,'tournamentId:',S.tournamentId);
+    if(!S._allPlayers.length){
+      console.warn('[Players] 0 players — check tournament_id in players table');
+    }
+    return S._allPlayers;
+  }catch(e){
+    console.error('[Players] Error:',e.message);
+    S._allPlayers=[];
+    return[];
+  }
 }
 async function saveFantasy(){
   const team=document.getElementById('fTeam')?.value;
