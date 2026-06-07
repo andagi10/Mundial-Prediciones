@@ -302,6 +302,7 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     <button onclick="showPanel('quiniela',this)">🎯 Quiniela</button>
     <button onclick="showPanel('bracket',this)">🏟 Bracket</button>
     <button onclick="showPanel('fantasy',this)">⚽ Fantasy</button>
+    <button onclick="showPanel('stats',this)">📊 Stats</button>
     <button onclick="showPanel('ranking',this)">🏅 Ranking</button>
     <button onclick="showPanel('admin',this)">🔧 Admin</button>
   </nav>
@@ -387,6 +388,17 @@ input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
     </div>
     <div class="stitle">📊 Fantasy Ranking</div>
     <div id="fantasyRank"></div>
+  </div>
+
+  <!-- ESTADÍSTICAS -->
+  <div class="panel" id="panel-stats">
+    <div class="stitle">📊 Estadísticas de Jugadores</div>
+    <div class="itabs" id="stats-tabs">
+      <button class="it active" onclick="showStats('goals',this)">⚽ Goles</button>
+      <button class="it" onclick="showStats('assists',this)">🅰️ Asistencias</button>
+      <button class="it" onclick="showStats('wins',this)">🏆 Partidos ganados</button>
+    </div>
+    <div id="statsContent"></div>
   </div>
 
   <!-- RANKING -->
@@ -1273,7 +1285,7 @@ const R32_DEFS=[
   {num:'88',h:'2D',a:'2G',date:'Vie 3 Jul',venue:'AT&T, Dallas'},
 ];
 
-let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null};
+let S={groupId:null,groupName:'',groupCode:'',adminPin:'',userId:null,userName:'',isAdmin:false,adminAuthed:false,rkMode:'total',matches:[],preds:{},finalPreds:{},fantasy:null,allUsers:[],allFantasy:[],allFinalPreds:[],tr:null,_allPreds:null,_players:{}};
 
 function saveSess(){localStorage.setItem('mw26s',JSON.stringify({groupId:S.groupId,groupName:S.groupName,groupCode:S.groupCode,adminPin:S.adminPin,userId:S.userId,userName:S.userName,isAdmin:S.isAdmin}));}
 function loadSess(){const r=localStorage.getItem('mw26s');if(!r)return false;Object.assign(S,JSON.parse(r));return !!(S.groupId&&S.userId);}
@@ -1546,59 +1558,108 @@ function renderBracketGroups(){
 }
 function renderBracketKO(){
   const el=document.getElementById('bracketKO');if(!el)return;
-  const phases=[
-    {key:'R32',label:'Ronda de 32',icon:'⚡'},
-    {key:'Octavos',label:'Octavos de Final',icon:'⚔️'},
-    {key:'Cuartos',label:'Cuartos de Final',icon:'🔥'},
-    {key:'Semis',label:'Semifinales',icon:'⭐'},
-    {key:'Final',label:'Final',icon:'🏆'},
-  ];
-  el.innerHTML=phases.map(ph=>{
-    let ms=S.matches.filter(m=>m.phase===ph.key);
-    // Para R32, si no hay datos en BD aún, mostrar los cruces oficiales
-    if(ph.key==='R32'&&ms.length===0){
-      // Mostrar bracket teórico con los cruces oficiales
-      return`<div class="ko-round">
-        <div class="ko-round-title">${ph.icon} ${ph.label}</div>
-        <div class="ko-matches">
-          ${R32_DEFS.map(r=>`<div class="ko-match">
-            <div class="ko-match-header"><span>M${r.num} · ${r.date}</span><span class="venue">${r.venue}</span></div>
-            <div class="ko-team-row"><div class="ko-team-name tbd-name">${r.h}</div><div class="ko-team-score">—</div></div>
-            <div class="ko-team-row"><div class="ko-team-name tbd-name">${r.a}</div><div class="ko-team-score">—</div></div>
-          </div>`).join('')}
-        </div>
-      </div>`;
-    }
-    if(!ms.length)return'';
-    const winnerH=(m)=>m.status==='FINISHED'&&m.home_score>m.away_score;
-    const winnerA=(m)=>m.status==='FINISHED'&&m.away_score>m.home_score;
-    return`<div class="ko-round">
-      <div class="ko-round-title">${ph.icon} ${ph.label}</div>
-      <div class="ko-matches">
-        ${ms.map(m=>{
-          const fin=m.status==='FINISHED',live=m.status==='IN_PLAY';
-          const tbdH=isTBD(m.home),tbdA=isTBD(m.away);
-          const wH=winnerH(m),wA=winnerA(m);
-          const d=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' '+new Date(m.match_date).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';
-          return`<div class="ko-match ${fin?'fin':''} ${live?'lv':''}">
-            <div class="ko-match-header">
-              ${live?'<span class="ko-live-badge">🔴 VIVO</span>':''}
-              <span>${d||'TBD'}</span>
-              <span class="venue">${m.stadium||''}</span>
-            </div>
-            <div class="ko-team-row ${wH?'winner-row':''}">
-              <div class="ko-team-name ${tbdH?'tbd-name':''}">${m.home}</div>
-              <div class="ko-team-score ${wH?'winner':''}">${fin||live?(m.home_score??'—'):'—'}</div>
-            </div>
-            <div class="ko-team-row ${wA?'winner-row':''}">
-              <div class="ko-team-name ${tbdA?'tbd-name':''}">${m.away}</div>
-              <div class="ko-team-score ${wA?'winner':''}">${fin||live?(m.away_score??'—'):'—'}</div>
-            </div>
-          </div>`;
-        }).join('')}
+  // Build visual bracket with boxes and lines
+  const phases=['R32','Octavos','Cuartos','Semis','Final'];
+  const phaseLabels={R32:'Ronda de 32',Octavos:'Octavos',Cuartos:'Cuartos',Semis:'Semis',Final:'Final'};
+
+  // Get matches per phase, fallback to R32_DEFS for R32 if empty
+  function getPhaseMatches(ph){
+    const ms=S.matches.filter(m=>m.phase===ph);
+    if(ph==='R32'&&!ms.length) return R32_DEFS.map(r=>({id:'r'+r.num,home:r.h,away:r.a,status:'SCHEDULED',home_score:null,away_score:null,match_date:null,stadium:r.venue,_label:r.num,_date:r.date}));
+    return ms;
+  }
+
+  function matchBox(m){
+    const fin=m.status==='FINISHED',live=m.status==='IN_PLAY';
+    const wH=fin&&m.home_score>m.away_score,wA=fin&&m.away_score>m.home_score;
+    const tbdH=isTBD(m.home),tbdA=isTBD(m.away);
+    const scoreH=fin||live?(m.home_score??0):tbdH?'':'—';
+    const scoreA=fin||live?(m.away_score??0):tbdA?'':'—';
+    const border=fin?'rgba(46,204,113,.35)':live?'rgba(231,76,60,.6)':'#2a2a3f';
+    const d=m.match_date?new Date(m.match_date).toLocaleDateString('es-ES',{day:'numeric',month:'short'}):(m._date||'');
+    return`<div style="background:#1a1a26;border:1px solid ${border};border-radius:8px;width:134px;font-size:10px;overflow:hidden;flex-shrink:0">
+      <div style="background:#12121a;padding:2px 6px;font-size:9px;color:#6b6b88;display:flex;justify-content:space-between">
+        <span>${d}</span><span style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap;max-width:70px">${m.stadium||''}</span>
       </div>
+      <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wH?'rgba(245,200,66,.07)':'transparent'}">
+        <span style="color:${tbdH?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdH?'italic':'normal'}">${m.home}</span>
+        <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wH?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreH}</span>
+      </div>
+      <div style="height:1px;background:#2a2a3f"></div>
+      <div style="display:flex;align-items:center;padding:5px 7px;gap:4px;background:${wA?'rgba(245,200,66,.07)':'transparent'}">
+        <span style="color:${tbdA?'#6b6b88':'#e8e8f0'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:${tbdA?'italic':'normal'}">${m.away}</span>
+        <span style="font-family:monospace;font-size:13px;font-weight:700;color:${wA?'#f5c842':fin?'#e8e8f0':'#6b6b88'};min-width:14px;text-align:right">${scoreA}</span>
+      </div>
+      ${live?'<div style="background:var(--red);color:#fff;font-size:8px;font-weight:700;text-align:center;padding:2px">🔴 EN VIVO</div>':''}
     </div>`;
-  }).join('');
+  }
+
+  const CARD_H=68; // match box height in px
+  const R32_H=CARD_H+4; // per-match slot height
+
+  // Build the bracket as a scrollable horizontal flex layout
+  let html='<div style="overflow-x:auto;padding-bottom:8px"><div style="display:flex;align-items:flex-start;gap:0;min-width:800px">';
+
+  phases.forEach((ph,pi)=>{
+    const ms=getPhaseMatches(ph);
+    const spacing=Math.pow(2,pi); // vertical spacing multiplier per round
+    const slotH=R32_H*spacing+(spacing-1)*4; // total height of one "slot" this round
+
+    html+=`<div style="display:flex;flex-direction:column">`;
+    html+=`<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b6b88;text-align:center;padding:3px 6px 6px">${phaseLabels[ph]}</div>`;
+    html+=`<div style="display:flex;flex-direction:column">`;
+
+    // Pairs: space between pairs = spacing matches height
+    const pairGap=pi>0?(slotH-CARD_H*2-4)*1:0;
+
+    ms.forEach((m,mi)=>{
+      if(pi>0&&mi>0&&mi%(1)===0){
+        // Add spacer between each match after the first
+        const spacerH=slotH-CARD_H-4;
+        html+=`<div style="height:${spacerH}px"></div>`;
+      }
+      html+=`<div style="display:flex;align-items:center">${matchBox(m)}`;
+      // Connector line to right
+      if(pi<phases.length-1){
+        const midH=CARD_H/2;
+        // If even match, line goes right and up to middle of pair
+        // If odd match, line goes right and down to middle of pair
+        const isEven=mi%2===0;
+        const pairMidOffset=slotH/2-CARD_H/2+CARD_H/2;
+        const lineH=slotH;
+        const goUp=isEven;
+        const connH=slotH;
+        const top=isEven?CARD_H/2:-(slotH-CARD_H-4+CARD_H/2);
+        html+=`<svg width="24" height="${connH}" style="overflow:visible;flex-shrink:0" fill="none">
+          <line x1="0" y1="${CARD_H/2}" x2="12" y2="${CARD_H/2}" stroke="#2a2a3f" stroke-width="1"/>
+          ${isEven?
+            `<line x1="12" y1="${CARD_H/2}" x2="12" y2="${connH-4}" stroke="#2a2a3f" stroke-width="1"/>`:
+            `<line x1="12" y1="${CARD_H/2}" x2="12" y2="${4}" stroke="#2a2a3f" stroke-width="1"/>`
+          }
+          ${isEven?
+            `<line x1="12" y1="${connH-4}" x2="24" y2="${connH-4}" stroke="#2a2a3f" stroke-width="1"/>`:
+            `<line x1="12" y1="${4}" x2="24" y2="${4}" stroke="#2a2a3f" stroke-width="1"/>`
+          }
+        </svg>`;
+      }
+      html+='</div>';
+    });
+
+    html+='</div></div>';
+    // Gap between rounds
+    if(pi<phases.length-1) html+='<div style="width:0"></div>';
+  });
+
+  // Trophy
+  html+=`<div style="display:flex;align-items:center;padding-left:8px;align-self:center;margin-top:${R32_H*8+4}px">
+    <div style="background:rgba(245,200,66,.1);border:1px solid #f5c842;border-radius:10px;padding:10px 12px;text-align:center;width:80px">
+      <div style="font-size:22px;margin-bottom:3px">🏆</div>
+      <div style="font-size:9px;font-weight:700;color:#f5c842;letter-spacing:1px">CAMPEÓN</div>
+    </div>
+  </div>`;
+
+  html+='</div></div>';
+  el.innerHTML=html;
 }
 
 // FANTASY
@@ -1611,16 +1672,19 @@ function renderFantasyForm(){
     <div class="lockb">🔒 Bloqueado — pide al admin que te desbloquee</div>`;
   }else{
     const teamOpts=TEAMS.map(t=>`<option value="${t}"${f?.team===t?' selected':''}>${t}</option>`).join('');
-    const squad=f?.team?SQUADS[f.team]||[]:[];
-    const pos_order={'GK':0,'DF':1,'MF':2,'FW':3};
-    const sortedSquad=[...squad].sort((a,b)=>(pos_order[a.pos]||0)-(pos_order[b.pos]||0)||a.n-b.n);
     const posLabels={'GK':'🧤 Porteros','DF':'🛡️ Defensas','MF':'⚙️ Centrocampistas','FW':'⚡ Delanteros'};
+    // Load from DB cache (loaded by onTeamChange) or inline SQUADS fallback
+    const dbSquad=f?.team&&S._players?.[f.team];
+    const inlineSquad=f?.team?SQUADS[f.team]||[]:[];
+    const rawSquad=dbSquad||inlineSquad.map(p=>({name:p.name,number:p.n,position:p.pos}));
     let playerOpts='<option value="">— Elige jugador —</option>';
     let lastPos='';
-    sortedSquad.forEach(p=>{
-      if(p.pos!==lastPos){playerOpts+=`<optgroup label="${posLabels[p.pos]||p.pos}">`;lastPos=p.pos;}
-      const selected=f?.player===p.name?' selected':'';
-      playerOpts+=`<option value="${p.name}" data-num="${p.n}"${selected}>#${p.n} ${p.name}</option>`;
+    rawSquad.forEach(p=>{
+      const pos=p.position||p.pos;
+      if(pos!==lastPos){playerOpts+=`<optgroup label="${posLabels[pos]||pos}">`;lastPos=pos;}
+      const num=p.number||p.n||0;
+      const selected=(f?.player===p.name)?' selected':'';
+      playerOpts+=`<option value="${p.name}" data-num="${num}"${selected}>#${num} ${p.name}</option>`;
     });
     area.innerHTML=`
     <div class="pf"><label>🌍 Tu equipo</label>
@@ -1635,10 +1699,15 @@ function renderFantasyForm(){
   }
   renderFantasyRanking();
 }
-function onTeamChange(team){
-  // Re-render form with new team selected (updates player list)
-  if(S.fantasy)S.fantasy={...S.fantasy,team};
+async function onTeamChange(team){
+  if(S.fantasy)S.fantasy={...S.fantasy,team,player:'',player_number:0};
   else S.fantasy={team,player:'',locked:false};
+  // Load players from DB for this team
+  if(team&&!S._players)S._players={};
+  if(team&&!S._players[team]){
+    const{data}=await sb.from('players').select('*').eq('team',team).order('position').order('number');
+    S._players[team]=data||[];
+  }
   renderFantasyForm();
 }
 async function saveFantasy(){
@@ -1684,7 +1753,48 @@ function calcFPts(uid){
 }
 
 // NAV
-function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();}
+
+// ── ESTADÍSTICAS ──────────────────────────────────────────────────
+let statsMode='goals';
+function showStats(mode,btn){
+  statsMode=mode;
+  document.querySelectorAll('#stats-tabs .it').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderStats();
+}
+async function renderStats(){
+  const el=document.getElementById('statsContent');if(!el)return;
+  // Collect all fantasy entries with player stats (cross all groups via allFantasy of this group)
+  // Plus load all fantasies from all groups for global leaderboard
+  const{data:allF}=await sb.from('fantasy').select('*').gt(statsMode==='goals'?'player_goals':'player_assists',0).order(statsMode==='goals'?'player_goals':statsMode==='assists'?'player_assists':'player_wins',{ascending:false}).limit(50);
+  if(!allF||!allF.length){
+    el.innerHTML='<div class="empty"><div class="ic">📊</div><p>Aún no hay estadísticas disponibles.<br><span style="font-size:11px">Se actualizan en el panel Admin cuando el admin registra goles/asistencias.</span></p></div>';
+    return;
+  }
+  const medal=['🥇','🥈','🥉'];
+  const field=statsMode==='goals'?'player_goals':statsMode==='assists'?'player_assists':'player_wins';
+  const label=statsMode==='goals'?'gol':'asist.';
+  const pts_per=statsMode==='goals'?5:statsMode==='assists'?3:1;
+  el.innerHTML=allF.map((f,i)=>{
+    const val=f[field]||0;
+    if(!val)return'';
+    // Try to get username from allUsers cache
+    const u=S.allUsers.find(x=>x.id===f.user_id);
+    const uname=u?u.username:'Jugador';
+    return`<div class="rc" style="${i<3?'border-color:rgba(245,200,66,.3)':''}">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;min-width:28px;color:${i<3?'#f5c842':'#6b6b88'}">${medal[i]||i+1}</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:12px">${f.player_number?'#'+f.player_number+' ':''}${f.player}</div>
+        <div style="font-size:10px;color:#6b6b88">${f.team} · apostado por <span style="color:#7c5cbf">${uname}</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:#f5c842">${val}</div>
+        <div style="font-size:10px;color:#6b6b88">${label} · +${val*pts_per} pts</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function showPanel(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');if(btn)btn.classList.add('active');if(id==='ranking')renderRk(S.rkMode);if(id==='admin')renderAdmin();if(id==='fantasy')renderFantasyForm();if(id==='live')renderLive();if(id==='bracket')renderBracket();if(id==='stats')renderStats();}
 function showRk(mode,btn){S.rkMode=mode;document.querySelectorAll('#panel-ranking .it').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderRk(mode);}
 function filterM(ph,btn){document.querySelectorAll('#panel-quiniela .it').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');document.querySelectorAll('.mc').forEach(c=>{c.style.display=(ph==='all'||c.dataset.phase===ph)?'':'none';});}
 async function renderRk(mode){const el=document.getElementById('globalRank');if(!el)return;if(!S._allPreds)S._allPreds=await loadAllPreds();const s=S.allUsers.map(u=>{const q=calcQPts(u.id),f=calcFPts(u.id);return{name:u.username,q,f,total:q+f};}).sort((a,b)=>mode==='quiniela'?b.q-a.q:mode==='fantasy'?b.f-a.f:b.total-a.total);if(!s.length){el.innerHTML='<div class="empty"><div class="ic">🏅</div><p>Sois solo tú por ahora</p></div>';return;}const mp=u=>mode==='quiniela'?u.q:mode==='fantasy'?u.f:u.total;el.innerHTML=s.map((u,i)=>`<div class="rc"><div class="rp ${i===0?'g1':i===1?'g2':i===2?'g3':''}">${i+1}</div><div style="flex:1"><div class="rn">${u.name}</div><div class="rtags"><span class="rtag m">🎯 ${u.q}</span><span class="rtag f">⚽ ${u.f}</span></div></div><div class="rpts">${mp(u)}<span style="font-size:10px;color:var(--mut)"> pts</span></div></div>`).join('');}
