@@ -663,23 +663,15 @@ if(loadSess()){initApp();}else{showScreen('auth');}
 // ── PWA: Service Worker ────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      // Check for updates every time app opens
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New version available — show update toast
-            showUpdateToast();
-          }
-        });
-      });
-    }).catch(err => console.log('SW error:', err));
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.log('SW error:', err));
   });
 
-  // Reload when new SW takes control
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    window.location.reload();
+  // El SW manda RELOAD cuando una nueva versión toma el control → recarga sola
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'RELOAD') {
+      window.location.reload();
+    }
   });
 }
 
@@ -721,16 +713,7 @@ function dismissInstall() {
   localStorage.setItem('installDismissed', '1');
 }
 
-// ── Update toast ──────────────────────────────────────────────────
-function showUpdateToast() {
-  const t = document.getElementById('toast');
-  t.innerHTML = '🆕 Nueva versión disponible <button onclick="applyUpdate()" style="margin-left:8px;background:#fff;color:#000;border:none;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer">Actualizar</button>';
-  t.style.background = 'var(--acc)';
-  t.style.transform = 'none';
-  t.style.opacity = '1';
-  t.style.maxWidth = '280px';
-  // Don't auto-hide this one
-}
+// (auto-update via SW)
 function applyUpdate() {
   navigator.serviceWorker.getRegistration().then(reg => {
     reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
